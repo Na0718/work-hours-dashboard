@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>工时数据分析看板 | 5/18-5/31</title>
+<title>工时成本分析看板 | 5/18-5/31</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -21,6 +21,7 @@ header h1 span{font-size:13px;color:var(--text-secondary);font-weight:400;margin
 .filter-group select:focus{border-color:var(--primary)}
 .btn-reset{padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;transition:background .2s;height:36px}
 .btn-reset:hover{background:#1557b0}
+.section-title{font-size:16px;font-weight:600;color:var(--text);margin:28px 0 14px;padding-left:12px;border-left:4px solid var(--primary);line-height:1}
 .kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
 .kpi-card{background:var(--card);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
 .kpi-card .kpi-label{font-size:12px;color:var(--text-secondary);margin-bottom:6px;font-weight:500}
@@ -31,6 +32,7 @@ header h1 span{font-size:13px;color:var(--text-secondary);font-weight:400;margin
 .kpi-card.orange .kpi-value{color:var(--orange)}
 .kpi-card.red .kpi-value{color:var(--red)}
 .kpi-card.purple .kpi-value{color:var(--purple)}
+.kpi-card.teal .kpi-value{color:var(--teal)}
 .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
 .chart-card{background:var(--card);border-radius:12px;padding:20px;box-shadow:var(--shadow)}
 .chart-card h3{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text)}
@@ -50,11 +52,6 @@ tr:hover td{background:#f8f9fb}
 .tag-high{background:#fce8e6;color:var(--red)}
 .tag-mid{background:#fef7e0;color:var(--orange)}
 .tag-low{background:#e6f4ea;color:var(--green)}
-.note-bar{background:#fff8e1;border-radius:10px;padding:12px 18px;font-size:12px;color:#795548;margin-bottom:20px;display:flex;align-items:center;gap:8px}
-.note-bar svg{flex-shrink:0}
-.org-level-btn{padding:6px 16px;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;background:#fff;color:var(--text-secondary);transition:all .2s;font-weight:500}
-.org-level-btn:hover{border-color:var(--primary);color:var(--primary)}
-.org-level-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .footer{text-align:center;font-size:11px;color:var(--text-secondary);padding:16px 0}
 #drillModalTable th{background:#f8f9fa;padding:10px 14px;text-align:left;font-weight:600;color:var(--text-secondary);border-bottom:2px solid var(--border);white-space:nowrap;position:sticky;top:0;z-index:1}
 #drillModalTable td{padding:9px 14px;border-bottom:1px solid #f0f0f0;white-space:nowrap}
@@ -67,14 +64,9 @@ tr:hover td{background:#f8f9fb}
 <body>
 <div class="dashboard">
   <header>
-    <h1>WE 美西大区 工时数据分析看板<span>发薪周期 2026/05/18 - 2026/05/31</span></h1>
+    <h1>WE 美西大区 工时成本分析看板<span>发薪周期 2026/05/18 - 2026/05/31</span></h1>
     <div class="badge">共 196 名员工 · 9 个四级组织</div>
   </header>
-
-  <div class="note-bar">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#f9a825" stroke-width="1.5"/><path d="M8 4.5v4M8 10.5h.01" stroke="#f9a825" stroke-width="1.5" stroke-linecap="round"/></svg>
-    说明：原始数据中工资列（常规出勤工资 / 加班工资 / 有薪假工资）均为空值，本看板仅展示工时维度分析。如需人力成本分析，请补充工资数据后重新生成。
-  </div>
 
   <div class="filters" id="filters">
     <div class="filter-group">
@@ -92,7 +84,23 @@ tr:hover td{background:#f8f9fb}
     <button class="btn-reset" onclick="resetFilters()">重置筛选</button>
   </div>
 
-  <div class="kpi-row" id="kpiRow"></div>
+  <!-- ===== 人力成本分析（置顶） ===== -->
+  <div class="section-title">人力成本分析</div>
+  <div class="kpi-row" id="kpiCost"></div>
+
+  <div class="chart-card full" style="margin-bottom:20px">
+    <h3>四级组织 — 成本总额 & 加班工资占比</h3>
+    <div class="chart-container tall"><canvas id="chartCostTotal"></canvas></div>
+  </div>
+
+  <div class="chart-card full" style="margin-bottom:20px">
+    <h3>四级组织 — 单位工时成本 ($/h)</h3>
+    <div class="chart-container tall"><canvas id="chartCostEff"></canvas></div>
+  </div>
+
+  <!-- ===== 工时分析 ===== -->
+  <div class="section-title">工时分析</div>
+  <div class="kpi-row" id="kpiHours"></div>
 
   <div class="chart-card full" style="margin-bottom:20px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
@@ -122,6 +130,8 @@ tr:hover td{background:#f8f9fb}
     </div>
   </div>
 
+  <!-- ===== 汇总表格 ===== -->
+  <div class="section-title">汇总与明细</div>
   <div class="table-section">
     <h3>四级组织汇总</h3>
     <div class="table-wrap"><table id="tblOrg4"></table></div>
@@ -136,7 +146,7 @@ tr:hover td{background:#f8f9fb}
   </div>
 
   <div id="drillModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:9999;justify-content:center;align-items:center">
-    <div style="background:#fff;border-radius:12px;width:92%;max-width:920px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+    <div style="background:#fff;border-radius:12px;width:92%;max-width:1000px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.18)">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e0e0e0">
         <h3 style="margin:0;font-size:15px;color:#202124" id="drillModalTitle">员工明细</h3>
         <button onclick="closeDrillModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#5f6368;padding:0 4px;line-height:1">&times;</button>
@@ -147,25 +157,23 @@ tr:hover td{background:#f8f9fb}
     </div>
   </div>
 
-  <div class="footer">数据来源：工时数据0518-0531.xlsx · 看板生成时间 2026-06-24</div>
+  <div class="footer">数据来源：工时成本数据0518-0531.xlsx · 看板生成时间 2026-06-24</div>
 </div>
 
 <script>
-const DATA = [{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"","company":"GOFO INC.","empId":"GL500260","name":"Ben Zhao","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501338","name":"Ziye Zhang","headcount":1,"regularH":79.03,"regularW":null,"overtimeH":1.65,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"综办组","company":"GOFO INC.","empId":"GL501153","name":"Yutian Zhang","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":8.53,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"","company":"GOFO INC.","empId":"GL500751","name":"Yue Zhang","headcount":1,"regularH":0.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","empId":"GL500050","name":"Shixia Zhang","headcount":1,"regularH":0.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":66.91,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"","company":"GOFO INC.","empId":"GL501011","name":"Qi Zhang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","empId":"GL500298","name":"Linfeng Zhang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL501137","name":"Li Zhang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":53.96,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL500459","name":"Lei Zhang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":32.61,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","empId":"GL501306","name":"Kun Zhang","headcount":1,"regularH":64.0,"regularW":null,"overtimeH":16.21,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","empId":"GL501337","name":"Jingyi Zhang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":33.37,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"","company":"GOFO INC.","empId":"GL501320","name":"Jingjing Zhang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","empId":"GL500524","name":"Hongxia Zhang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SMF01","company":"GOFO INC.","empId":"GL501144","name":"Hao Zeng","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":3.45,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"","company":"GOFO INC.","empId":"GL500341","name":"Haoran Yang","headcount":1,"regularH":79.82,"regularW":null,"overtimeH":6.5,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"CNO01","company":"GOFO INC.","empId":"GL500687","name":"Guodong Yang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":28.82,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","empId":"GL501124","name":"Feng Yang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":57.24,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","empId":"GL500143","name":"Dongsheng Yang","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":15.45,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","empId":"GL500377","name":"Chengwei Yang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":32.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","empId":"GL501317","name":"Zhiyuan Xue","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":2.47,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","empId":"GL500620","name":"Wenbin Xie","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":6.11,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"维保组","company":"GOFO INC.","empId":"GL500661","name":"Weiyi Wu","headcount":1,"regularH":79.92,"regularW":null,"overtimeH":30.84,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"司机组","company":"GOFO INC.","empId":"GL500567","name":"Weijie Wu","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":4.32,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"PDX01","company":"GOFO INC.","empId":"GL501342","name":"Wang Wu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO01","company":"GOFO INC.","empId":"GL501236","name":"Yulong Wang","headcount":1,"regularH":42.53,"regularW":null,"overtimeH":14.89,"overtimeW":null,"leaveH":16.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","empId":"GL500654","name":"Tao Wang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":32.77,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","empId":"GL500616","name":"Sheng Wang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":16.51,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","empId":"GL500184","name":"Rui Wang","headcount":1,"regularH":79.05,"regularW":null,"overtimeH":9.48,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAS01","company":"GOFO INC.","empId":"GL501018","name":"Qiang Wang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","empId":"GL500487","name":"Ning Wang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":18.08,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO01","company":"GOFO INC.","empId":"GL501233","name":"Min Wang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":13.77,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","empId":"GL500737","name":"Meng Wang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":20.78,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL500547","name":"Mei Wang","headcount":1,"regularH":24.0,"regularW":null,"overtimeH":8.47,"overtimeW":null,"leaveH":42.16,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL500621","name":"Jing Wang","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":17.03,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501256","name":"Jianing Wang","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":34.5,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","empId":"GL501323","name":"Jian Wang","headcount":1,"regularH":40.0,"regularW":null,"overtimeH":7.01,"overtimeW":null,"leaveH":51.96,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收支持组","company":"GOFO INC.","empId":"GL501343","name":"Hui Wang","headcount":1,"regularH":73.72,"regularW":null,"overtimeH":10.68,"overtimeW":null,"leaveH":5.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SMF01","company":"GOFO INC.","empId":"GL500652","name":"Haoyu Wang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":6.57,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","empId":"GL500617","name":"Hao Wang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":24.89,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"","company":"GOFO INC.","empId":"GL501228","name":"Chao Wang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":48.2,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL501221","name":"Bin Wang","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":9.83,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN01","company":"GOFO INC.","empId":"GL501098","name":"Yong Tian","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":49.32,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL500539","name":"Xin Tian","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":31.7,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"SFV01","company":"GOFO INC.","empId":"GL500689","name":"Wenxin Tang","headcount":1,"regularH":79.82,"regularW":null,"overtimeH":13.57,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"PDX01","company":"GOFO INC.","empId":"GL500550","name":"Ting Sun","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":6.9,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"CNO01","company":"GOFO INC.","empId":"GL500407","name":"Peng Sun","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":24.61,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"","company":"GOFO INC.","empId":"GL500433","name":"Jianfeng Sun","headcount":1,"regularH":64.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":16.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL500587","name":"Hui Sun","headcount":1,"regularH":58.91,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","empId":"GL501046","name":"Guoqiang Su","headcount":1,"regularH":70.3,"regularW":null,"overtimeH":3.13,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL501179","name":"Yang Shen","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":52.54,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO01","company":"GOFO INC.","empId":"GL501103","name":"Minghao Shao","headcount":1,"regularH":65.89,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"","company":"GOFO INC.","empId":"GL500703","name":"Zekun Shao","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","empId":"GL500597","name":"Liang Shi","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":30.25,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"维保组","company":"GOFO INC.","empId":"GL500308","name":"Kai Shi","headcount":1,"regularH":64.0,"regularW":null,"overtimeH":28.46,"overtimeW":null,"leaveH":15.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL500134","name":"Jianfeng Shao","headcount":1,"regularH":73.33,"regularW":null,"overtimeH":4.62,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX02","company":"GOFO INC.","empId":"GL500593","name":"Yiming Shao","headcount":1,"regularH":75.2,"regularW":null,"overtimeH":14.75,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"","company":"GOFO INC.","empId":"GL501307","name":"Chunmei Rui","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","empId":"GL500683","name":"Chao Ren","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":8.97,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","empId":"GL500588","name":"Yongjun Qin","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":21.01,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL501025","name":"Xiaobo Qin","headcount":1,"regularH":79.0,"regularW":null,"overtimeH":11.05,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL500495","name":"Wenjun Qin","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":19.68,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL501095","name":"Shouwei Qin","headcount":1,"regularH":71.73,"regularW":null,"overtimeH":4.83,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","empId":"GL500721","name":"Rong Qin","headcount":1,"regularH":79.05,"regularW":null,"overtimeH":9.48,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","empId":"GL501231","name":"Yifan Qian","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":41.44,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"","company":"GOFO INC.","empId":"GL500553","name":"Jinlong Pang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","empId":"GL500635","name":"Guangbin Pan","headcount":1,"regularH":79.97,"regularW":null,"overtimeH":14.7,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"异常处理组","company":"GOFO INC.","empId":"GL501324","name":"Yi Niu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":16.02,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","empId":"GL501245","name":"Xiaojun Niu","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":22.77,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","empId":"GL501050","name":"Xiaobo Niu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":16.87,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN01","company":"GOFO INC.","empId":"GL500563","name":"Xiaowei Nan","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":77.15,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"维保组","company":"GOFO INC.","empId":"GL501048","name":"Zhiyuan Mu","headcount":1,"regularH":67.1,"regularW":null,"overtimeH":12.46,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL500679","name":"Fang Mu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":27.22,"overtimeW":null,"leaveH":24.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501226","name":"Yuqi Meng","headcount":1,"regularH":72.12,"regularW":null,"overtimeH":8.72,"overtimeW":null,"leaveH":14.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL501344","name":"Yiwei Meng","headcount":1,"regularH":67.8,"regularW":null,"overtimeH":1.23,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501275","name":"Tian Meng","headcount":1,"regularH":72.48,"regularW":null,"overtimeH":4.38,"overtimeW":null,"leaveH":4.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"","company":"GOFO INC.","empId":"GL500653","name":"Shaohua Meng","headcount":1,"regularH":76.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":4.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"","company":"GOFO INC.","empId":"GL501316","name":"Zhiwei Ma","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL500592","name":"Linlin Ma","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","empId":"GL500544","name":"Lei Ma","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":28.55,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL501076","name":"Kai Ma","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":31.35,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL500610","name":"Jian Ma","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":51.3,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","empId":"GL501325","name":"Hong Ma","headcount":1,"regularH":74.82,"regularW":null,"overtimeH":9.3,"overtimeW":null,"leaveH":3.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL501168","name":"Hao Ma","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":19.48,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"综办组","company":"GOFO INC.","empId":"GL500660","name":"Guang Ma","headcount":1,"regularH":64.0,"regularW":null,"overtimeH":9.13,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","empId":"GL501251","name":"Fei Ma","headcount":1,"regularH":63.03,"regularW":null,"overtimeH":18.39,"overtimeW":null,"leaveH":6.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501219","name":"Chenxi Ma","headcount":1,"regularH":64.6,"regularW":null,"overtimeH":0.48,"overtimeW":null,"leaveH":12.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL500605","name":"Bo Ma","headcount":1,"regularH":59.71,"regularW":null,"overtimeH":2.15,"overtimeW":null,"leaveH":2.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL501229","name":"Chao Lu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":48.65,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL500383","name":"Yan Lu","headcount":1,"regularH":70.22,"regularW":null,"overtimeH":2.27,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL500319","name":"Xiaoping Lu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA01","company":"GOFO INC.","empId":"GL500581","name":"Xiaohui Lu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":71.03,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL501224","name":"Xiaodong Lu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":62.77,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL501225","name":"Xiao Lou","headcount":1,"regularH":40.0,"regularW":null,"overtimeH":3.51,"overtimeW":null,"leaveH":24.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL500348","name":"Shenghua Lu","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":25.54,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","empId":"GL500514","name":"Rongxin Lu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":5.66,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL500632","name":"Ping Lu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":55.44,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO01","company":"GOFO INC.","empId":"GL500647","name":"Pei Lu","headcount":1,"regularH":79.98,"regularW":null,"overtimeH":1.4,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","empId":"GL501340","name":"Jiaqi Lu","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":33.67,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","empId":"GL501073","name":"Jiahao Lu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":50.68,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501282","name":"Tianle Li","headcount":1,"regularH":32.0,"regularW":null,"overtimeH":4.27,"overtimeW":null,"leaveH":40.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"PHX01","company":"GOFO INC.","empId":"GL500519","name":"Jianye Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":34.43,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL500629","name":"Jiangwei Li","headcount":1,"regularH":47.98,"regularW":null,"overtimeH":0.91,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","empId":"GL500560","name":"Hao Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":29.95,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL500110","name":"Guang Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":29.73,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","empId":"GL501309","name":"Feng Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":13.87,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAS01","company":"GOFO INC.","empId":"GL500695","name":"Dandan Li","headcount":1,"regularH":75.29,"regularW":null,"overtimeH":5.63,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL500423","name":"Chunhua Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":31.61,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","empId":"GL500638","name":"Bin Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":37.81,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL501270","name":"Shengnan Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":32.77,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","empId":"GL500540","name":"Rong Li","headcount":1,"regularH":64.0,"regularW":null,"overtimeH":12.4,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX02","company":"GOFO INC.","empId":"GL501157","name":"Qiming Li","headcount":1,"regularH":75.5,"regularW":null,"overtimeH":18.47,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"综办组","company":"GOFO INC.","empId":"GL501331","name":"Xinru Li","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":6.43,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL501043","name":"Yangguang Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":30.16,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","empId":"GL500123","name":"Yongjun Li","headcount":1,"regularH":76.02,"regularW":null,"overtimeH":2.18,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","empId":"GL501262","name":"Shaobo Li","headcount":1,"regularH":64.0,"regularW":null,"overtimeH":13.03,"overtimeW":null,"leaveH":32.67,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","empId":"GL501164","name":"Ruiqi Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":11.15,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"PHX01","company":"GOFO INC.","empId":"GL501330","name":"Xinyu Li","headcount":1,"regularH":79.99,"regularW":null,"overtimeH":16.29,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","empId":"GL500645","name":"Ming Li","headcount":1,"regularH":61.62,"regularW":null,"overtimeH":10.3,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501255","name":"Mengyao Li","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":8.95,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","empId":"GL501173","name":"Mengxing Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":35.08,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL500673","name":"Mengdi Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":32.53,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","empId":"GL500530","name":"Long Li","headcount":1,"regularH":59.08,"regularW":null,"overtimeH":1.65,"overtimeW":null,"leaveH":8.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501304","name":"Linjie Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":21.88,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","empId":"GL501197","name":"Kun Li","headcount":1,"regularH":77.67,"regularW":null,"overtimeH":8.58,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","empId":"GL501032","name":"Kai Li","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":14.25,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","empId":"GL501239","name":"Jiahao Li","headcount":1,"regularH":70.43,"regularW":null,"overtimeH":2.28,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","empId":"GL501273","name":"Jiale Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":25.28,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","empId":"GL501294","name":"Jian Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":9.49,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL501088","name":"Hongyu Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":16.33,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL500692","name":"Dong Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":10.81,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA01","company":"GOFO INC.","empId":"GL501196","name":"Ziyu Li","headcount":1,"regularH":24.0,"regularW":null,"overtimeH":0.12,"overtimeW":null,"leaveH":15.04,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"FAT01","company":"GOFO INC.","empId":"GL500549","name":"Donghai Li","headcount":1,"regularH":76.6,"regularW":null,"overtimeH":2.18,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501212","name":"Chunyu Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":38.52,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL501090","name":"Cheng Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":40.37,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"SLC01","company":"GOFO INC.","empId":"GL501183","name":"Chenglin Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":53.49,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","empId":"GL500574","name":"Chang Li","headcount":1,"regularH":49.08,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","empId":"GL500336","name":"Yanbing Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":34.7,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","empId":"GL500286","name":"Bing Li","headcount":1,"regularH":76.04,"regularW":null,"overtimeH":0.08,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","empId":"GL500658","name":"Haiming Li","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":31.93,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"FAT01","company":"GOFO INC.","empId":"GL500494","name":"Yongkang Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":19.67,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL500480","name":"Shuangzhu Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":28.8,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","empId":"GL500483","name":"Weizhi Li","headcount":1,"regularH":79.45,"regularW":null,"overtimeH":14.02,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","empId":"GL501327","name":"Wenrui Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":24.32,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","empId":"GL500140","name":"Weilin Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":29.48,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL501177","name":"Shuo Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":4.38,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","empId":"GL501200","name":"Lingxiao Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":41.13,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SMF01","company":"GOFO INC.","empId":"GL500650","name":"Jiangshan Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":2.92,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","empId":"GL500313","name":"Lihua Li","headcount":1,"regularH":36.84,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":14.43,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","empId":"GL500595","name":"Jiaxing Li","headcount":1,"regularH":39.33,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"ABQ01","company":"GOFO INC.","empId":"GL501086","name":"Hongbo Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":52.32,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL501130","name":"Hengxin Li","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":9.87,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAS01","company":"GOFO INC.","empId":"GL501232","name":"Haoxiang Li","headcount":1,"regularH":70.55,"regularW":null,"overtimeH":4.75,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501227","name":"Haoran Li","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":12.02,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","empId":"GL501284","name":"Haoran Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":54.8,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","empId":"GL500293","name":"Haoran Li","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":35.55,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL500618","name":"Haonan Li","headcount":1,"regularH":79.5,"regularW":null,"overtimeH":41.31,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"综办组","company":"GOFO INC.","empId":"GL500641","name":"Haifeng Li","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":3.68,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"综办组","company":"GOFO INC.","empId":"GL501345","name":"Haidong Li","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":2.57,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL501267","name":"Sen Lang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":19.17,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","empId":"GL500476","name":"Yong Kang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":35.84,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","empId":"GL501326","name":"Wenke Jing","headcount":1,"regularH":79.2,"regularW":null,"overtimeH":14.99,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"PDX01","company":"GOFO INC.","empId":"GL500534","name":"Wei Jiang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":37.91,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","empId":"GL500503","name":"Tao Jiang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":8.4,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"综办组","company":"GOFO INC.","empId":"GL501271","name":"Shuting Jiang","headcount":1,"regularH":15.43,"regularW":null,"overtimeH":0.85,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL501053","name":"Peng Jiang","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":40.96,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL500611","name":"Minghui Jiang","headcount":1,"regularH":77.58,"regularW":null,"overtimeH":15.83,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","empId":"GL501167","name":"Mengyuan Jiang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":25.63,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","empId":"GL500625","name":"Menglin Jiang","headcount":1,"regularH":24.0,"regularW":null,"overtimeH":0.89,"overtimeW":null,"leaveH":5.24,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","empId":"GL500485","name":"Mengfei Jiang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":31.5,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","empId":"GL500399","name":"Mengchao Jiang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":40.06,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"综办组","company":"GOFO INC.","empId":"GL501293","name":"Jiaqi Jiang","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":5.21,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","empId":"GL501291","name":"Jialin Jiang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":10.48,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","empId":"GL500577","name":"Chen Jiang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":59.64,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","empId":"GL500460","name":"Bo Jiang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":8.78,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","empId":"GL500504","name":"Bo Jiang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":32.78,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL501102","name":"Zixuan Huang","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":27.28,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL500316","name":"Xianming Huang","headcount":1,"regularH":68.57,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","empId":"GL501024","name":"Wenqiang Huang","headcount":1,"regularH":76.95,"regularW":null,"overtimeH":27.62,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","empId":"GL500688","name":"Guohua Huang","headcount":1,"regularH":63.72,"regularW":null,"overtimeH":13.23,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","empId":"GL501160","name":"Yue Hu","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":11.8,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","empId":"GL500330","name":"Xiaolong Hu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":11.85,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"司机组","company":"GOFO INC.","empId":"GL500582","name":"Xiaohu Hu","headcount":1,"regularH":54.35,"regularW":null,"overtimeH":5.42,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","empId":"GL501135","name":"Linfei Hu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":57.57,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","empId":"GL501302","name":"Lihua Hu","headcount":1,"regularH":0.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":4.4,"leaveW":null},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","empId":"GL501250","name":"Jingjing Hu","headcount":1,"regularH":0.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN01","company":"GOFO INC.","empId":"GL501321","name":"Jing Hu","headcount":1,"regularH":71.18,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","empId":"GL500461","name":"Jianwei Hu","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":25.61,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501299","name":"Yifan Hou","headcount":1,"regularH":55.88,"regularW":null,"overtimeH":1.47,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","empId":"GL500583","name":"Yan He","headcount":1,"regularH":80.0,"regularW":null,"overtimeH":26.73,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN01","company":"GOFO INC.","empId":"GL501159","name":"Yao He","headcount":1,"regularH":64.51,"regularW":null,"overtimeH":16.85,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"PDX01","company":"GOFO INC.","empId":"GL500643","name":"Ning He","headcount":1,"regularH":71.13,"regularW":null,"overtimeH":9.93,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"SLC01","company":"GOFO INC.","empId":"GL501155","name":"Ming He","headcount":1,"regularH":64.62,"regularW":null,"overtimeH":19.97,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"SFV02","company":"GOFO INC.","empId":"GL501318","name":"Zhijie He","headcount":1,"regularH":21.59,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA01","company":"GOFO INC.","empId":"GL501319","name":"Zhihao He","headcount":1,"regularH":25.97,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","empId":"GL501313","name":"Zheng He","headcount":1,"regularH":32.0,"regularW":null,"overtimeH":7.08,"overtimeW":null,"leaveH":0.0,"leaveW":null},{"org3":"WE 美西大区","org4":"","org5":"","company":"YUNEXPRESS USA,INC.","empId":"YU001","name":"External Staff","headcount":1,"regularH":72.0,"regularW":null,"overtimeH":0.0,"overtimeW":null,"leaveH":8.0,"leaveW":null}];
+const DATA = [{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"","company":"GOFO INC.","payType":"年薪","payRate":75000.0,"empId":"GL500260","name":"Ben Zhao","headcount":1,"regularH":80.0,"regularW":2884.62,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501338","name":"Ziye Zhang","headcount":1,"regularH":79.03,"regularW":1817.69,"overtimeH":1.65,"overtimeW":56.93,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"综办组","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL501153","name":"Yutian Zhang","headcount":1,"regularH":72.0,"regularW":1728.0,"overtimeH":8.53,"overtimeW":307.08,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"","company":"GOFO INC.","payType":"年薪","payRate":100000.0,"empId":"GL500751","name":"Yue Zhang","headcount":1,"regularH":0.0,"regularW":0.0,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","payType":"时薪","payRate":22.5,"empId":"GL500050","name":"Shixia Zhang","headcount":1,"regularH":0.0,"regularW":0.0,"overtimeH":0.0,"overtimeW":0.0,"leaveH":66.91,"leaveW":1505.48},{"org3":"WE 美西大区","org4":"CNO.H","org5":"","company":"GOFO INC.","payType":"年薪","payRate":87000.0,"empId":"GL501011","name":"Qi Zhang","headcount":1,"regularH":80.0,"regularW":3346.15,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","payType":"年薪","payRate":70308.0,"empId":"GL500298","name":"Linfeng Zhang","headcount":1,"regularH":80.0,"regularW":2704.15,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL501137","name":"Li Zhang","headcount":1,"regularH":80.0,"regularW":2080.0,"overtimeH":53.96,"overtimeW":2110.03,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500459","name":"Lei Zhang","headcount":1,"regularH":80.0,"regularW":2000.0,"overtimeH":32.61,"overtimeW":1229.13,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL501093","name":"Sicheng Yun","headcount":1,"regularH":64.0,"regularW":1600.0,"overtimeH":16.21,"overtimeW":607.88,"leaveH":8.0,"leaveW":200.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501097","name":"Yichen Yue","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":33.37,"overtimeW":1154.72,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"","company":"GOFO INC.","payType":"年薪","payRate":87996.0,"empId":"GL501265","name":"Miao Yu","headcount":1,"regularH":80.0,"regularW":3384.46,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500069","name":"Chenglong Yu","headcount":1,"regularH":80.0,"regularW":2000.0,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SMF01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL500795","name":"Ao Yu","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":3.45,"overtimeW":108.68,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"","company":"GOFO INC.","payType":"时薪","payRate":29.0,"empId":"GL500317","name":"Mengnan You","headcount":1,"regularH":79.82,"regularW":2314.78,"overtimeH":6.5,"overtimeW":282.75,"leaveH":8.0,"leaveW":232.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"CNO01","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL500155","name":"Yuese Yao","headcount":1,"regularH":80.0,"regularW":2080.0,"overtimeH":28.82,"overtimeW":1123.98,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL500954","name":"Yao Yao","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":57.24,"overtimeW":1888.92,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501280","name":"Kaiqin Yang","headcount":1,"regularH":72.0,"regularW":1656.0,"overtimeH":15.45,"overtimeW":533.03,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500918","name":"Shuo Yan","headcount":1,"regularH":80.0,"regularW":2000.0,"overtimeH":32.0,"overtimeW":1200.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","payType":"时薪","payRate":22.5,"empId":"GL501028","name":"Ludong Yan","headcount":1,"regularH":80.0,"regularW":1800.0,"overtimeH":2.47,"overtimeW":83.36,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","payType":"时薪","payRate":22.5,"empId":"GL501297","name":"Hong Xu","headcount":1,"regularH":80.0,"regularW":1800.0,"overtimeH":6.11,"overtimeW":206.21,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"维保组","company":"GOFO INC.","payType":"时薪","payRate":22.5,"empId":"GL500103","name":"Fei Xing","headcount":1,"regularH":79.92,"regularW":1798.2,"overtimeH":30.84,"overtimeW":1040.85,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"司机组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500023","name":"Shuchen Xiao","headcount":1,"regularH":72.0,"regularW":1800.0,"overtimeH":4.32,"overtimeW":162.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"PDX01","company":"GOFO INC.","payType":"年薪","payRate":66360.0,"empId":"GL500236","name":"Tanran Wei","headcount":1,"regularH":80.0,"regularW":2552.31,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO01","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500956","name":"Hanxi Wei","headcount":1,"regularH":42.53,"regularW":978.19,"overtimeH":14.89,"overtimeW":513.71,"leaveH":16.0,"leaveW":368.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL500796","name":"Yanping Wang","headcount":1,"regularH":80.0,"regularW":2080.0,"overtimeH":32.77,"overtimeW":1278.03,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":22.5,"empId":"GL500726","name":"Xueming Wang","headcount":1,"regularH":80.0,"regularW":1800.0,"overtimeH":16.51,"overtimeW":557.21,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL500234","name":"Xinyue Wang","headcount":1,"regularH":79.05,"regularW":2055.3,"overtimeH":9.48,"overtimeW":369.72,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAS01","company":"GOFO INC.","payType":"年薪","payRate":64008.0,"empId":"GL500324","name":"Xin Wang","headcount":1,"regularH":80.0,"regularW":2461.85,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500847","name":"Ting Wang","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":18.08,"overtimeW":623.76,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO01","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL500955","name":"Purui Wang","headcount":1,"regularH":80.0,"regularW":1920.0,"overtimeH":13.77,"overtimeW":495.72,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL500367","name":"Lei Wang","headcount":1,"regularH":80.0,"regularW":1920.0,"overtimeH":20.78,"overtimeW":748.08,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500498","name":"Juan Carlos Jr Vargas（Juan Carlos Jr Vargas）","headcount":1,"regularH":24.0,"regularW":552.0,"overtimeH":8.47,"overtimeW":292.22,"leaveH":42.16,"leaveW":969.68},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":22.5,"empId":"GL501298","name":"Shihao Sun","headcount":1,"regularH":72.0,"regularW":1620.0,"overtimeH":17.03,"overtimeW":574.76,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500872","name":"Peng Sun","headcount":1,"regularH":72.0,"regularW":1656.0,"overtimeH":34.5,"overtimeW":1351.25,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL501031","name":"孙国瑜Tony（Guoyu Sun）","headcount":1,"regularH":40.0,"regularW":1000.0,"overtimeH":7.01,"overtimeW":262.88,"leaveH":51.96,"leaveW":1299.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收支持组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500667","name":"Kaiwen Su","headcount":1,"regularH":73.72,"regularW":1843.0,"overtimeH":10.68,"overtimeW":400.5,"leaveH":5.0,"leaveW":125.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SMF01","company":"GOFO INC.","payType":"时薪","payRate":22.5,"empId":"GL500128","name":"Zhili Song","headcount":1,"regularH":80.0,"regularW":1800.0,"overtimeH":6.57,"overtimeW":221.74,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":31.5,"empId":"GL500517","name":"Qundi Situ","headcount":1,"regularH":80.0,"regularW":2520.0,"overtimeH":24.89,"overtimeW":1176.05,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"","company":"GOFO INC.","payType":"时薪","payRate":27.0,"empId":"GL500914","name":"Jianqi Shi","headcount":1,"regularH":80.0,"regularW":2160.0,"overtimeH":48.2,"overtimeW":1952.1,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":21.5,"empId":"GL501104","name":"Jianan Sheng","headcount":1,"regularH":72.0,"regularW":1548.0,"overtimeH":9.83,"overtimeW":317.02,"leaveH":8.0,"leaveW":172.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN01","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500024","name":"Ling Shen","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":49.32,"overtimeW":1701.54,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500497","name":"SANCHEZ RODOLFO SALVADOR","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":31.7,"overtimeW":1093.65,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"SFV01","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500389","name":"Daniel Z Rodriguez","headcount":1,"regularH":79.82,"regularW":1835.86,"overtimeH":13.57,"overtimeW":468.17,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"PDX01","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500040","name":"Chuanbing Ren","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":6.9,"overtimeW":238.05,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"CNO01","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL500248","name":"Wenping Qiu","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":24.61,"overtimeW":812.13,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"","company":"GOFO INC.","payType":"年薪","payRate":76080.0,"empId":"GL500387","name":"Xiaoyan Qiao","headcount":1,"regularH":64.0,"regularW":2340.92,"overtimeH":0.0,"overtimeW":0.0,"leaveH":16.0,"leaveW":585.23},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":33.0,"empId":"GL500316","name":"Hanfei Qi","headcount":1,"regularH":58.91,"regularW":1944.03,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500054","name":"Xiao Luo","headcount":1,"regularH":70.3,"regularW":1757.5,"overtimeH":3.13,"overtimeW":117.38,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500998","name":"Lu Lu","headcount":1,"regularH":80.0,"regularW":2000.0,"overtimeH":52.54,"overtimeW":1981.63,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO01","company":"GOFO INC.","payType":"时薪","payRate":35.0,"empId":"GL500315","name":"Guanyu Lu","headcount":1,"regularH":65.89,"regularW":2306.15,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"","company":"GOFO INC.","payType":"年薪","payRate":70308.0,"empId":"GL500338","name":"Jiyang Liu","headcount":1,"regularH":80.0,"regularW":2704.15,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500848","name":"Jianshun Liu","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":30.25,"overtimeW":1043.63,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"维保组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501029","name":"Chaochen Liu","headcount":1,"regularH":64.0,"regularW":1472.0,"overtimeH":28.46,"overtimeW":981.87,"leaveH":15.0,"leaveW":345.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500247","name":"Meijun Lin","headcount":1,"regularH":73.33,"regularW":1833.25,"overtimeH":4.62,"overtimeW":173.25,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX02","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500352","name":"Alex Lin","headcount":1,"regularH":75.2,"regularW":1729.6,"overtimeH":14.75,"overtimeW":508.88,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"","company":"GOFO INC.","payType":"年薪","payRate":95400.0,"empId":"GL500485","name":"Zhongming Li","headcount":1,"regularH":80.0,"regularW":3669.23,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500542","name":"Zeqi Li","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":8.97,"overtimeW":309.47,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","payType":"时薪","payRate":30.5,"empId":"GL500509","name":"Qianqian Li","headcount":1,"regularH":80.0,"regularW":2440.0,"overtimeH":21.01,"overtimeW":961.21,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500193","name":"Jinglin Li","headcount":1,"regularH":79.0,"regularW":1975.0,"overtimeH":11.05,"overtimeW":414.38,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL500788","name":"Benson Lee","headcount":1,"regularH":80.0,"regularW":2080.0,"overtimeH":19.68,"overtimeW":767.52,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL501103","name":"Johnathan Edward Ladson Jr","headcount":1,"regularH":71.73,"regularW":1506.33,"overtimeH":4.83,"overtimeW":152.15,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":24.5,"empId":"GL501038","name":"Yan Jin","headcount":1,"regularH":79.05,"regularW":1936.73,"overtimeH":9.48,"overtimeW":348.39,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL500905","name":"Saishuai Jin","headcount":1,"regularH":80.0,"regularW":2080.0,"overtimeH":41.44,"overtimeW":1616.16,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"","company":"GOFO INC.","payType":"年薪","payRate":75000.0,"empId":"GL501339","name":"Chuan Jin","headcount":1,"regularH":80.0,"regularW":2884.62,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL500833","name":"Chengyou Jiang","headcount":1,"regularH":79.97,"regularW":1759.34,"overtimeH":14.7,"overtimeW":485.1,"leaveH":8.0,"leaveW":176.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"异常处理组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL500013","name":"Feifei Hou","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":16.02,"overtimeW":528.66,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501096","name":"Hang Ngoc Hoa","headcount":1,"regularH":72.0,"regularW":1656.0,"overtimeH":22.77,"overtimeW":785.57,"leaveH":8.0,"leaveW":184.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL501290","name":"Haoyuan He","headcount":1,"regularH":80.0,"regularW":2000.0,"overtimeH":16.87,"overtimeW":632.63,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN01","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL500158","name":"Donghai He","headcount":1,"regularH":80.0,"regularW":1920.0,"overtimeH":77.15,"overtimeW":2777.4,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"维保组","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL500196","name":"Qiang Gu","headcount":1,"regularH":67.1,"regularW":1744.6,"overtimeH":12.46,"overtimeW":485.94,"leaveH":8.0,"leaveW":208.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500499","name":"Garcia Keith Joseph","headcount":1,"regularH":80.0,"regularW":2000.0,"overtimeH":27.22,"overtimeW":1020.75,"leaveH":24.0,"leaveW":600.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL500600","name":"Chenrui Fan","headcount":1,"regularH":72.12,"regularW":1875.12,"overtimeH":8.72,"overtimeW":340.08,"leaveH":14.0,"leaveW":364.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL501201","name":"Francisco Espinoza","headcount":1,"regularH":67.8,"regularW":1423.8,"overtimeH":1.23,"overtimeW":38.75,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":28.0,"empId":"GL500262","name":"Jasmine Dong","headcount":1,"regularH":72.48,"regularW":2029.44,"overtimeH":4.38,"overtimeW":183.96,"leaveH":4.0,"leaveW":112.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"","company":"GOFO INC.","payType":"年薪","payRate":84000.0,"empId":"GL500810","name":"Wei Deng","headcount":1,"regularH":76.0,"regularW":3069.23,"overtimeH":0.0,"overtimeW":0.0,"leaveH":4.0,"leaveW":161.54},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"","company":"GOFO INC.","payType":"年薪","payRate":67000.0,"empId":"GL500266","name":"Fei Deng","headcount":1,"regularH":80.0,"regularW":2576.93,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"年薪","payRate":71040.0,"empId":"GL500500","name":"Chavez William","headcount":1,"regularH":80.0,"regularW":2732.3,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501345","name":"Yuexin Bai","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":28.55,"overtimeW":984.98,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL500434","name":"Alfaro, Walter Jessie","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":31.35,"overtimeW":1081.58,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501400","name":"Yang He","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":51.3,"overtimeW":1798.26,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":21.5,"empId":"GL501326","name":"Jiahui Li","headcount":1,"regularH":74.82,"regularW":1608.63,"overtimeH":9.3,"overtimeW":299.93,"leaveH":3.0,"leaveW":64.5},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501500","name":"Richard Anthony Munoz","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":19.48,"overtimeW":672.06,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"综办组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501432","name":"Chaoqun Qin","headcount":1,"regularH":64.0,"regularW":1472.0,"overtimeH":9.13,"overtimeW":314.99,"leaveH":8.0,"leaveW":184.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL501399","name":"Jianhui Zhang","headcount":1,"regularH":63.03,"regularW":1512.72,"overtimeH":18.39,"overtimeW":662.04,"leaveH":6.0,"leaveW":144.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL501359","name":"Yan Zou","headcount":1,"regularH":64.6,"regularW":1550.4,"overtimeH":0.48,"overtimeW":17.28,"leaveH":12.0,"leaveW":288.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL501586","name":"Uriel Aguirre","headcount":1,"regularH":59.71,"regularW":1313.62,"overtimeH":2.15,"overtimeW":70.95,"leaveH":2.0,"leaveW":44.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL501564","name":"Feifei Cui","headcount":1,"regularH":80.0,"regularW":2080.0,"overtimeH":48.65,"overtimeW":1907.36,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501181","name":"Haiyang Li","headcount":1,"regularH":70.22,"regularW":1615.06,"overtimeH":2.27,"overtimeW":78.32,"leaveH":8.0,"leaveW":184.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"年薪","payRate":70308.0,"empId":"GL501481","name":"Baoying Wen","headcount":1,"regularH":80.0,"regularW":2704.15,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA01","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501604","name":"Yuxuan Gan","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":71.03,"overtimeW":2450.54,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501631","name":"Weijie Huang","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":62.77,"overtimeW":2210.88,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL501807","name":"Omar Aguirre","headcount":1,"regularH":40.0,"regularW":840.0,"overtimeH":3.51,"overtimeW":110.57,"leaveH":24.0,"leaveW":504.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.5,"empId":"GL501761","name":"Jareier Eduardo Lopez","headcount":1,"regularH":72.0,"regularW":1692.0,"overtimeH":25.54,"overtimeW":900.29,"leaveH":8.0,"leaveW":188.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"合流合包组","company":"GOFO INC.","payType":"时薪","payRate":22.5,"empId":"GL501784","name":"Yurun Mei","headcount":1,"regularH":80.0,"regularW":1800.0,"overtimeH":5.66,"overtimeW":191.03,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL501792","name":"Bo Wei","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":55.44,"overtimeW":1752.35,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL501790","name":"Weineng Yu","headcount":1,"regularH":79.98,"regularW":1679.58,"overtimeH":1.4,"overtimeW":44.1,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL501894","name":"Chunliang Guo","headcount":1,"regularH":72.0,"regularW":1800.0,"overtimeH":33.67,"overtimeW":1262.63,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL501871","name":"Jian Guo","headcount":1,"regularH":80.0,"regularW":2000.0,"overtimeH":50.68,"overtimeW":1900.5,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501822","name":"Xiao Han","headcount":1,"regularH":32.0,"regularW":736.0,"overtimeH":4.27,"overtimeW":147.32,"leaveH":40.0,"leaveW":920.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"PHX01","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501046","name":"Na Cai","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":34.43,"overtimeW":1187.84,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL501916","name":"Jose G Esquivias Terraza","headcount":1,"regularH":47.98,"regularW":1007.58,"overtimeH":0.91,"overtimeW":28.67,"leaveH":8.0,"leaveW":168.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501939","name":"Pengfei Han","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":29.95,"overtimeW":1033.28,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL501866","name":"Ling Lu","headcount":1,"regularH":80.0,"regularW":2000.0,"overtimeH":29.73,"overtimeW":1164.88,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501867","name":"Zhejun Teng","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":13.87,"overtimeW":478.52,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAS01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL501926","name":"Yueqi Zhao","headcount":1,"regularH":75.29,"regularW":1581.09,"overtimeH":5.63,"overtimeW":177.35,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501965","name":"Delun Chen","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":31.61,"overtimeW":1090.55,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502014","name":"Ziyu Zhan","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":37.81,"overtimeW":1250.15,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502007","name":"Xianjun Ma","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":32.77,"overtimeW":1130.57,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL501931","name":"Yuan Tian","headcount":1,"regularH":64.0,"regularW":1408.0,"overtimeH":12.4,"overtimeW":409.2,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX02","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502030","name":"Xinnan Li","headcount":1,"regularH":75.5,"regularW":1736.5,"overtimeH":18.47,"overtimeW":637.22,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"综办组","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL502042","name":"Beibei Zhao","headcount":1,"regularH":72.0,"regularW":1872.0,"overtimeH":6.43,"overtimeW":250.77,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502058","name":"Yongtai Luo","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":30.16,"overtimeW":1072.26,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","payType":"时薪","payRate":20.0,"empId":"GL502087","name":"Ethan Thomas","headcount":1,"regularH":76.02,"regularW":1520.4,"overtimeH":2.18,"overtimeW":65.4,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502090","name":"叶珍萌Aria (Zhenmeng Ye)","headcount":1,"regularH":64.0,"regularW":1344.0,"overtimeH":13.03,"overtimeW":410.45,"leaveH":32.67,"leaveW":686.07},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502152","name":"Haichao Chi","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":11.15,"overtimeW":367.95,"leaveH":8.0,"leaveW":176.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"PHX01","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL502169","name":"Zixuan Pan","headcount":1,"regularH":79.99,"regularW":1919.76,"overtimeH":16.29,"overtimeW":586.44,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502176","name":"Yutong Li","headcount":1,"regularH":61.62,"regularW":1355.64,"overtimeH":10.3,"overtimeW":345.4,"leaveH":8.0,"leaveW":176.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502216","name":"Enze Zhang","headcount":1,"regularH":72.0,"regularW":1656.0,"overtimeH":8.95,"overtimeW":308.78,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502254","name":"Zhenxian Wang","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":35.08,"overtimeW":1157.64,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":27.0,"empId":"GL502261","name":"Dianlong Ning","headcount":1,"regularH":80.0,"regularW":2160.0,"overtimeH":32.53,"overtimeW":1317.47,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502282","name":"Zesen Li","headcount":1,"regularH":59.08,"regularW":1240.68,"overtimeH":1.65,"overtimeW":51.98,"leaveH":8.0,"leaveW":168.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL502191","name":"Wenli Gai","headcount":1,"regularH":80.0,"regularW":1920.0,"overtimeH":21.88,"overtimeW":787.68,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502271","name":"Peng Lan","headcount":1,"regularH":77.67,"regularW":1786.41,"overtimeH":8.58,"overtimeW":296.01,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL502296","name":"Wenjie Gu","headcount":1,"regularH":72.0,"regularW":1800.0,"overtimeH":14.25,"overtimeW":534.38,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502300","name":"Shengjun Li","headcount":1,"regularH":70.43,"regularW":1619.89,"overtimeH":2.28,"overtimeW":78.66,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL502301","name":"Yaohui Fu","headcount":1,"regularH":80.0,"regularW":1920.0,"overtimeH":25.28,"overtimeW":910.08,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL500326","name":"Chuanyin Zhang","headcount":1,"regularH":80.0,"regularW":2080.0,"overtimeH":9.49,"overtimeW":370.11,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":21.5,"empId":"GL501215","name":"Zixuan Wu","headcount":1,"regularH":80.0,"regularW":1720.0,"overtimeH":16.33,"overtimeW":526.64,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501766","name":"Fan Yang","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":10.81,"overtimeW":372.95,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA01","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502315","name":"邹依琳Elaine (Yilin Zou)","headcount":1,"regularH":24.0,"regularW":552.0,"overtimeH":0.12,"overtimeW":4.14,"leaveH":15.04,"leaveW":345.92},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"FAT01","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502401","name":"Yuanhao Tan","headcount":1,"regularH":76.6,"regularW":1685.2,"overtimeH":2.18,"overtimeW":71.94,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502416","name":"Miguel Angel Correa","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":38.52,"overtimeW":1399.67,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502457","name":"Zhaojun Shang","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":40.37,"overtimeW":1292.66,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"SLC01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502372","name":"Haochen Sun","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":53.49,"overtimeW":1684.94,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502412","name":"Yanni Su","headcount":1,"regularH":49.08,"regularW":1030.68,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":25.5,"empId":"GL500603","name":"Man Yee Yolanda Yip","headcount":1,"regularH":80.0,"regularW":2040.0,"overtimeH":34.7,"overtimeW":1352.14,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL501757","name":"Guangbin Yang","headcount":1,"regularH":76.04,"regularW":1596.84,"overtimeH":0.08,"overtimeW":2.52,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL502019","name":"Shurui Liu","headcount":1,"regularH":72.0,"regularW":1800.0,"overtimeH":31.93,"overtimeW":1200.5,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"FAT01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502177","name":"Benjamin Alejandro Zendejas","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":19.67,"overtimeW":619.61,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502436","name":"Shichen Liao","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":28.8,"overtimeW":993.6,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502440","name":"Mingzhu Pan","headcount":1,"regularH":79.45,"regularW":1827.35,"overtimeH":14.02,"overtimeW":483.69,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL502453","name":"Zijian Wang","headcount":1,"regularH":80.0,"regularW":1920.0,"overtimeH":24.32,"overtimeW":875.52,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"维保组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502458","name":"Chenglong Liu","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":29.48,"overtimeW":972.84,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502459","name":"Dongxu Yang","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":4.38,"overtimeW":144.54,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502463","name":"Jiawei Deng","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":41.13,"overtimeW":1357.29,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SMF01","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502474","name":"Man Huang","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":2.92,"overtimeW":96.36,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502490","name":"吴毅 (Yi Wu)","headcount":1,"regularH":36.84,"regularW":773.64,"overtimeH":0.0,"overtimeW":0.0,"leaveH":14.43,"leaveW":303.03},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","payType":"时薪","payRate":20.0,"empId":"GL502516","name":"Tingjun Liu","headcount":1,"regularH":39.33,"regularW":786.6,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"ABQ01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502172","name":"Cristobal YbarraCristobal","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":52.32,"overtimeW":1648.08,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":26.0,"empId":"GL502522","name":"Yongjie Huang","headcount":1,"regularH":72.0,"regularW":1872.0,"overtimeH":9.87,"overtimeW":384.93,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAS01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502545","name":"Chun Mei","headcount":1,"regularH":70.55,"regularW":1481.55,"overtimeH":4.75,"overtimeW":149.63,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502548","name":"Yizhou Miao","headcount":1,"regularH":72.0,"regularW":1656.0,"overtimeH":12.02,"overtimeW":449.19,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"LAX01","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502555","name":"Wencheng Nie","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":54.8,"overtimeW":1808.4,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502561","name":"Yue Wei","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":35.55,"overtimeW":1226.48,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502584","name":"Weiming Shu","headcount":1,"regularH":79.5,"regularW":1828.5,"overtimeH":41.31,"overtimeW":1445.9,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"综办组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL500946","name":"Jianping Zhang","headcount":1,"regularH":72.0,"regularW":1800.0,"overtimeH":3.68,"overtimeW":138.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"综办组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL501883","name":"Yuehan Zhao","headcount":1,"regularH":72.0,"regularW":1656.0,"overtimeH":2.57,"overtimeW":88.67,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502593","name":"Yiyan Huang","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":19.17,"overtimeW":632.61,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502626","name":"Hua Zhang","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":35.84,"overtimeW":1236.48,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502628","name":"Feibo Jiang","headcount":1,"regularH":79.2,"regularW":1821.6,"overtimeH":14.99,"overtimeW":517.16,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"PDX01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502652","name":"Weihua Lun","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":37.91,"overtimeW":1194.17,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","payType":"时薪","payRate":20.0,"empId":"GL502654","name":"Shaoguang Chen","headcount":1,"regularH":80.0,"regularW":1600.0,"overtimeH":8.4,"overtimeW":252.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"综办组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502656","name":"Dianxia Pan","headcount":1,"regularH":15.43,"regularW":354.89,"overtimeH":0.85,"overtimeW":29.33,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502657","name":"Ling Huang","headcount":1,"regularH":72.0,"regularW":1656.0,"overtimeH":40.96,"overtimeW":1422.55,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502677","name":"Wei Yuan","headcount":1,"regularH":77.58,"regularW":1629.18,"overtimeH":15.83,"overtimeW":498.65,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502698","name":"Zizhen Pu","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":25.63,"overtimeW":884.24,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502709","name":"Ying Yang","headcount":1,"regularH":24.0,"regularW":504.0,"overtimeH":0.89,"overtimeW":28.04,"leaveH":5.24,"leaveW":110.04},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502735","name":"Liang Huang","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":31.5,"overtimeW":992.25,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502711","name":"Linxuan Zhang","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":40.06,"overtimeW":1415.08,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"综办组","company":"GOFO INC.","payType":"时薪","payRate":25.0,"empId":"GL502717","name":"Jianan Hao","headcount":1,"regularH":72.0,"regularW":1800.0,"overtimeH":5.21,"overtimeW":195.38,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"调度组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502742","name":"Xinyun Zhang","headcount":1,"regularH":80.0,"regularW":1840.0,"overtimeH":10.48,"overtimeW":361.56,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL502758","name":"Huipei Shen","headcount":1,"regularH":80.0,"regularW":1920.0,"overtimeH":59.64,"overtimeW":2155.8,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","payType":"时薪","payRate":20.0,"empId":"GL502778","name":"Nehemiah Angelo Cortinas","headcount":1,"regularH":80.0,"regularW":1600.0,"overtimeH":8.78,"overtimeW":263.4,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502789","name":"Jiangshan Zheng","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":32.78,"overtimeW":1032.57,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502812","name":"Garcia Kyle Joshua","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":27.28,"overtimeW":900.24,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502821","name":"Zonghua Qin","headcount":1,"regularH":68.57,"regularW":1577.11,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"分拣组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502840","name":"Itzel Azucena Lopez Banuelos","headcount":1,"regularH":76.95,"regularW":1769.85,"overtimeH":27.62,"overtimeW":952.89,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502878","name":"Yixin Zhang","headcount":1,"regularH":63.72,"regularW":1465.56,"overtimeH":13.23,"overtimeW":456.44,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"车辆管理部","org5":"","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL502882","name":"Yifan Chen","headcount":1,"regularH":72.0,"regularW":1728.0,"overtimeH":11.8,"overtimeW":424.8,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"揽收调度组","company":"GOFO INC.","payType":"时薪","payRate":24.0,"empId":"GL502906","name":"Yangyang Li","headcount":1,"regularH":80.0,"regularW":1920.0,"overtimeH":11.85,"overtimeW":426.6,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LA揽收部","org5":"司机组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502939","name":"William S Yu","headcount":1,"regularH":54.35,"regularW":1250.05,"overtimeH":5.42,"overtimeW":186.99,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA.H","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL502941","name":"Chun Lien Huang","headcount":1,"regularH":80.0,"regularW":1680.0,"overtimeH":57.57,"overtimeW":1813.46,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"LAV.H","org5":"操作组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL501189","name":"李明Lawrence（Ming Li）","headcount":1,"regularH":0.0,"regularW":0.0,"overtimeH":0.0,"overtimeW":0.0,"leaveH":4.4,"leaveW":96.8},{"org3":"WE 美西大区","org4":"NC 北加片区","org5":"SFO.H","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL502413","name":"Hairiwen Su","headcount":1,"regularH":0.0,"regularW":0.0,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN01","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502872","name":"Jiatong Li","headcount":1,"regularH":71.18,"regularW":1565.96,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN.H","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502942","name":"Alfonso Eduviges Regalado Ramirez","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":25.61,"overtimeW":845.13,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502960","name":"Yuchen Weng","headcount":1,"regularH":55.88,"regularW":1229.36,"overtimeH":1.47,"overtimeW":48.51,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"CNO.H","org5":"异常处理组","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502965","name":"Yiying Wang","headcount":1,"regularH":80.0,"regularW":1760.0,"overtimeH":26.73,"overtimeW":882.09,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"DEN01","company":"GOFO INC.","payType":"时薪","payRate":20.0,"empId":"GL502986","name":"Wenxin Li","headcount":1,"regularH":64.51,"regularW":1290.2,"overtimeH":16.85,"overtimeW":505.5,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"PDX01","company":"GOFO INC.","payType":"时薪","payRate":22.0,"empId":"GL502987","name":"Miao Lin","headcount":1,"regularH":71.13,"regularW":1564.86,"overtimeH":9.93,"overtimeW":327.69,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"DS 丹佛·盐湖城片区","org5":"SLC01","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL503003","name":"Ruilong Zhang","headcount":1,"regularH":64.62,"regularW":1357.02,"overtimeH":19.97,"overtimeW":629.06,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SC 南加片区","org5":"SFV02","company":"GOFO INC.","payType":"时薪","payRate":21.0,"empId":"GL503017","name":"Shishi Wang","headcount":1,"regularH":21.59,"regularW":453.39,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"SP 西雅图·波特兰片区","org5":"SEA01","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL503018","name":"Jingling Wu","headcount":1,"regularH":25.97,"regularW":597.31,"overtimeH":0.0,"overtimeW":0.0,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"运营支持部","org5":"区域支持组","company":"GOFO INC.","payType":"时薪","payRate":23.0,"empId":"GL503019","name":"Yaoqian Mai","headcount":1,"regularH":32.0,"regularW":736.0,"overtimeH":7.08,"overtimeW":244.26,"leaveH":0.0,"leaveW":0.0},{"org3":"WE 美西大区","org4":"","org5":"","company":"YUNEXPRESS USA,INC.","payType":"年薪","payRate":80000.0,"empId":"GL000472","name":"常哲","headcount":1,"regularH":72.0,"regularW":2769.23,"overtimeH":0.0,"overtimeW":0.0,"leaveH":8.0,"leaveW":307.69}];
 
 let charts = {};
 const COLORS = ['#4285f4','#ea4335','#fbbc04','#34a853','#ff6d01','#46bdc6','#7b1fa2','#c2185b','#00897b'];
 
 function populateAvgOtDropdowns() {
-  const org4s = [...new Set(DATA.map(d => d.org4).filter(Boolean))].sort();
-  const sel4 = document.getElementById('avgOt-org4');
+  var org4s = [...new Set(DATA.map(function(d){return d.org4}).filter(Boolean))].sort();
+  var sel4 = document.getElementById('avgOt-org4');
   sel4.innerHTML = '<option value="">全部</option>';
-  org4s.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel4.appendChild(o); });
+  org4s.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel4.appendChild(o)});
 }
 
-function onAvgOtFilterChange() {
-  update();
-}
+function onAvgOtFilterChange() { update(); }
 
 function init() {
   populateFilters();
@@ -176,340 +184,366 @@ function init() {
 }
 
 function populateFilters() {
-  const org3s = [...new Set(DATA.map(d=>d.org3).filter(Boolean))].sort();
-  const sel3 = document.getElementById('f-org3');
-  org3s.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel3.appendChild(o); });
+  var org3s = [...new Set(DATA.map(function(d){return d.org3}).filter(Boolean))].sort();
+  var sel3 = document.getElementById('f-org3');
+  org3s.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel3.appendChild(o)});
   updateOrg4Options();
 }
 
 function updateOrg4Options() {
-  const org3 = document.getElementById('f-org3').value;
-  const filtered = DATA.filter(d => !org3 || d.org3 === org3);
-  const org4s = [...new Set(filtered.map(d=>d.org4).filter(Boolean))].sort();
-  const sel4 = document.getElementById('f-org4');
+  var org3 = document.getElementById('f-org3').value;
+  var filtered = DATA.filter(function(d){return !org3 || d.org3 === org3});
+  var org4s = [...new Set(filtered.map(function(d){return d.org4}).filter(Boolean))].sort();
+  var sel4 = document.getElementById('f-org4');
   sel4.innerHTML = '<option value="">全部</option>';
-  org4s.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel4.appendChild(o); });
+  org4s.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel4.appendChild(o)});
   updateOrg5Options();
 }
 
 function updateOrg5Options() {
-  const org3 = document.getElementById('f-org3').value;
-  const org4 = document.getElementById('f-org4').value;
-  const filtered = DATA.filter(d => (!org3 || d.org3 === org3) && (!org4 || d.org4 === org4));
-  const org5s = [...new Set(filtered.map(d=>d.org5).filter(Boolean))].sort();
-  const sel5 = document.getElementById('f-org5');
+  var org3 = document.getElementById('f-org3').value;
+  var org4 = document.getElementById('f-org4').value;
+  var filtered = DATA.filter(function(d){return (!org3||d.org3===org3)&&(!org4||d.org4===org4)});
+  var org5s = [...new Set(filtered.map(function(d){return d.org5}).filter(Boolean))].sort();
+  var sel5 = document.getElementById('f-org5');
   sel5.innerHTML = '<option value="">全部</option>';
-  org5s.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel5.appendChild(o); });
+  org5s.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel5.appendChild(o)});
 }
 
 function bindEvents() {
-  document.getElementById('f-org3').addEventListener('change', () => { updateOrg4Options(); update(); });
-  document.getElementById('f-org4').addEventListener('change', () => { updateOrg5Options(); update(); });
-  document.getElementById('f-org5').addEventListener('change', () => update());
+  document.getElementById('f-org3').addEventListener('change', function(){updateOrg4Options();update()});
+  document.getElementById('f-org4').addEventListener('change', function(){updateOrg5Options();update()});
+  document.getElementById('f-org5').addEventListener('change', function(){update()});
 }
 
 function resetFilters() {
-  document.getElementById('f-org3').value = '';
-  document.getElementById('f-org4').value = '';
-  document.getElementById('f-org5').value = '';
+  document.getElementById('f-org3').value='';
+  document.getElementById('f-org4').value='';
+  document.getElementById('f-org5').value='';
   updateOrg4Options();
   update();
 }
 
 function getFiltered() {
-  const org3 = document.getElementById('f-org3').value;
-  const org4 = document.getElementById('f-org4').value;
-  const org5 = document.getElementById('f-org5').value;
-  return DATA.filter(d => (!org3 || d.org3 === org3) && (!org4 || d.org4 === org4) && (!org5 || d.org5 === org5));
+  var org3=document.getElementById('f-org3').value;
+  var org4=document.getElementById('f-org4').value;
+  var org5=document.getElementById('f-org5').value;
+  return DATA.filter(function(d){return (!org3||d.org3===org3)&&(!org4||d.org4===org4)&&(!org5||d.org5===org5)});
 }
 
 function aggregate(data, key) {
-  const map = {};
-  data.forEach(d => {
-    const k = d[key] || '(未分配)';
-    if (!map[k]) map[k] = { name: k, hc: 0, regH: 0, otH: 0, lvH: 0 };
+  var map = {};
+  data.forEach(function(d){
+    var k = d[key] || '(未分配)';
+    if (!map[k]) map[k] = {name:k, hc:0, regH:0, otH:0, lvH:0, regW:0, otW:0, lvW:0, hourlyCount:0, annualCount:0};
     map[k].hc += d.headcount;
     map[k].regH += d.regularH;
     map[k].otH += d.overtimeH;
     map[k].lvH += d.leaveH;
+    map[k].regW += (d.regularW||0);
+    map[k].otW += (d.overtimeW||0);
+    map[k].lvW += (d.leaveW||0);
+    if (d.payType === '时薪') map[k].hourlyCount++;
+    else if (d.payType === '年薪') map[k].annualCount++;
   });
-  return Object.values(map).sort((a,b) => b.hc - a.hc);
+  return Object.values(map).sort(function(a,b){return b.hc-a.hc});
 }
 
-function fmt(v) { return v.toLocaleString('zh-CN', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
-function pct(a, b) { return b === 0 ? '0.0' : (a / b * 100).toFixed(1); }
+function fmt(v){return v.toLocaleString('zh-CN',{minimumFractionDigits:1,maximumFractionDigits:1})}
+function fmtD(v){return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function pct(a,b){return b===0?'0.0':(a/b*100).toFixed(1)}
 
 function update() {
-  const data = getFiltered();
-  updateKPIs(data);
-  updateCharts(data);
+  var data = getFiltered();
+  updateCostKPIs(data);
+  updateCostCharts(data);
+  updateHoursKPIs(data);
+  updateHoursCharts(data);
   updateTables(data);
 }
 
-function updateKPIs(data) {
-  const hc = data.reduce((s,d) => s + d.headcount, 0);
-  const regH = data.reduce((s,d) => s + d.regularH, 0);
-  const otH = data.reduce((s,d) => s + d.overtimeH, 0);
-  const lvH = data.reduce((s,d) => s + d.leaveH, 0);
-  const totalH = regH + otH + lvH;
-  const otRate = totalH === 0 ? 0 : (otH / totalH * 100);
-  const avgH = hc === 0 ? 0 : totalH / hc;
-  const otCount = data.filter(d => d.overtimeH > 0).length;
+function updateCostKPIs(data) {
+  var hc=data.reduce(function(s,d){return s+d.headcount},0);
+  var regW=data.reduce(function(s,d){return s+(d.regularW||0)},0);
+  var otW=data.reduce(function(s,d){return s+(d.overtimeW||0)},0);
+  var lvW=data.reduce(function(s,d){return s+(d.leaveW||0)},0);
+  var totalW=regW+otW+lvW;
+  var avgW=hc===0?0:totalW/hc;
+  var otWR=totalW===0?0:(otW/totalW*100);
+  var regH=data.reduce(function(s,d){return s+d.regularH},0);
+  var otH=data.reduce(function(s,d){return s+d.overtimeH},0);
+  var totalH=regH+otH+data.reduce(function(s,d){return s+d.leaveH},0);
+  var unitCost=totalH===0?0:totalW/totalH;
 
-  document.getElementById('kpiRow').innerHTML = `
-    <div class="kpi-card highlight"><div class="kpi-label">在册人数</div><div class="kpi-value">${hc}</div><div class="kpi-sub">含加班 ${otCount} 人 (${pct(otCount,hc)}%)</div></div>
-    <div class="kpi-card"><div class="kpi-label">总工时</div><div class="kpi-value">${fmt(totalH)}</div><div class="kpi-sub">人均 ${fmt(avgH)} h</div></div>
-    <div class="kpi-card green"><div class="kpi-label">常规出勤工时</div><div class="kpi-value">${fmt(regH)}</div><div class="kpi-sub">占比 ${pct(regH,totalH)}%</div></div>
-    <div class="kpi-card orange"><div class="kpi-label">加班工时</div><div class="kpi-value">${fmt(otH)}</div><div class="kpi-sub">占比 ${pct(otH,totalH)}%</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">有薪假工时</div><div class="kpi-value">${fmt(lvH)}</div><div class="kpi-sub">占比 ${pct(lvH,totalH)}%</div></div>
-    <div class="kpi-card ${otRate > 20 ? 'red' : ''}"><div class="kpi-label">加班率</div><div class="kpi-value">${otRate.toFixed(1)}%</div><div class="kpi-sub">加班/总工时</div></div>
-  `;
+  document.getElementById('kpiCost').innerHTML = 
+    '<div class="kpi-card highlight"><div class="kpi-label">工资总额</div><div class="kpi-value" style="font-size:22px">'+fmtD(totalW)+'</div><div class="kpi-sub">人均 '+fmtD(avgW)+'</div></div>'+
+    '<div class="kpi-card green"><div class="kpi-label">常规出勤工资</div><div class="kpi-value" style="font-size:22px">'+fmtD(regW)+'</div><div class="kpi-sub">占比 '+pct(regW,totalW)+'%</div></div>'+
+    '<div class="kpi-card orange"><div class="kpi-label">加班工资</div><div class="kpi-value" style="font-size:22px">'+fmtD(otW)+'</div><div class="kpi-sub">占比 '+pct(otW,totalW)+'%</div></div>'+
+    '<div class="kpi-card purple"><div class="kpi-label">有薪假工资</div><div class="kpi-value" style="font-size:22px">'+fmtD(lvW)+'</div><div class="kpi-sub">占比 '+pct(lvW,totalW)+'%</div></div>'+
+    '<div class="kpi-card teal"><div class="kpi-label">单位工时成本</div><div class="kpi-value" style="font-size:22px">$'+unitCost.toFixed(2)+'</div><div class="kpi-sub">总工资/总工时</div></div>'+
+    '<div class="kpi-card '+(otWR>20?'red':'')+'"><div class="kpi-label">加班工资占比</div><div class="kpi-value">'+otWR.toFixed(1)+'%</div><div class="kpi-sub">加班工资/总工资</div></div>';
 }
 
-function updateCharts(data) {
-  const byOrg4 = aggregate(data, 'org4');
-  const byOrg5 = aggregate(data, 'org5');
+function updateHoursKPIs(data) {
+  var hc=data.reduce(function(s,d){return s+d.headcount},0);
+  var regH=data.reduce(function(s,d){return s+d.regularH},0);
+  var otH=data.reduce(function(s,d){return s+d.overtimeH},0);
+  var lvH=data.reduce(function(s,d){return s+d.leaveH},0);
+  var totalH=regH+otH+lvH;
+  var otRate=totalH===0?0:(otH/totalH*100);
+  var avgH=hc===0?0:totalH/hc;
+  var otCount=data.filter(function(d){return d.overtimeH>0}).length;
 
-  // --- Combined: Avg Hours & OT Rate chart with cascading dropdowns ---
-  const selOrg4 = document.getElementById('avgOt-org4').value;
-  let chartData = data;
-  let chartAggKey = 'org4';
-  if (selOrg4) { chartData = data.filter(d => d.org4 === selOrg4); chartAggKey = 'org5'; }
+  document.getElementById('kpiHours').innerHTML = 
+    '<div class="kpi-card highlight"><div class="kpi-label">在册人数</div><div class="kpi-value">'+hc+'</div><div class="kpi-sub">含加班 '+otCount+' 人 ('+pct(otCount,hc)+'%)</div></div>'+
+    '<div class="kpi-card"><div class="kpi-label">总工时</div><div class="kpi-value">'+fmt(totalH)+'</div><div class="kpi-sub">人均 '+fmt(avgH)+' h</div></div>'+
+    '<div class="kpi-card green"><div class="kpi-label">常规出勤工时</div><div class="kpi-value">'+fmt(regH)+'</div><div class="kpi-sub">占比 '+pct(regH,totalH)+'%</div></div>'+
+    '<div class="kpi-card orange"><div class="kpi-label">加班工时</div><div class="kpi-value">'+fmt(otH)+'</div><div class="kpi-sub">占比 '+pct(otH,totalH)+'%</div></div>'+
+    '<div class="kpi-card purple"><div class="kpi-label">有薪假工时</div><div class="kpi-value">'+fmt(lvH)+'</div><div class="kpi-sub">占比 '+pct(lvH,totalH)+'%</div></div>'+
+    '<div class="kpi-card '+(otRate>20?'red':'')+'"><div class="kpi-label">加班率</div><div class="kpi-value">'+otRate.toFixed(1)+'%</div><div class="kpi-sub">加班/总工时</div></div>';
+}
 
-  const aggData = aggregate(chartData, chartAggKey).sort((a,b) => {
-    const avgA = a.hc > 0 ? (a.regH + a.otH + a.lvH) / a.hc : 0;
-    const avgB = b.hc > 0 ? (b.regH + b.otH + b.lvH) / b.hc : 0;
-    return avgB - avgA;
+function updateCostCharts(data) {
+  var byOrg4 = aggregate(data, 'org4').sort(function(a,b){var ta=a.regW+a.otW+a.lvW,tb=b.regW+b.otW+b.lvW;return tb-ta});
+  var costLabels = byOrg4.map(function(d){return d.name});
+
+  // Chart 1: Cost total stacked bar + OT cost ratio line
+  if (charts.costTotal) charts.costTotal.destroy();
+  charts.costTotal = new Chart(document.getElementById('chartCostTotal'), {
+    type:'bar',
+    data:{
+      labels:costLabels,
+      datasets:[
+        {label:'常规出勤工资',data:byOrg4.map(function(d){return +d.regW.toFixed(2)}),backgroundColor:'#34a853',borderRadius:2,yAxisID:'y',order:3},
+        {label:'加班工资',data:byOrg4.map(function(d){return +d.otW.toFixed(2)}),backgroundColor:'#ea4335',borderRadius:2,yAxisID:'y',order:2},
+        {label:'有薪假工资',data:byOrg4.map(function(d){return +d.lvW.toFixed(2)}),backgroundColor:'#a142f4',borderRadius:2,yAxisID:'y',order:1},
+        {label:'加班工资占比 %',data:byOrg4.map(function(d){var t=d.regW+d.otW+d.lvW;return t>0?+(d.otW/t*100).toFixed(1):0}),type:'line',borderColor:'#ff6d01',backgroundColor:'rgba(255,109,1,.1)',pointBackgroundColor:'#ff6d01',pointRadius:4,pointHoverRadius:6,borderWidth:2.5,fill:false,yAxisID:'y1',tension:0.3,order:0}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      onClick:function(evt,elements){if(elements.length>0){var idx=elements[0].index;showDrillDown(costLabels[idx],'org4')}},
+      plugins:{
+        legend:{position:'top',labels:{boxWidth:12,font:{size:11},usePointStyle:true,pointStyle:'circle'}},
+        tooltip:{callbacks:{label:function(ctx){if(ctx.dataset.type==='line')return ctx.dataset.label+': '+ctx.raw+'%';return ctx.dataset.label+': $'+ctx.raw.toLocaleString('en-US',{minimumFractionDigits:2})}}}
+      },
+      scales:{
+        x:{ticks:{font:{size:10},maxRotation:45}},
+        y:{position:'left',stacked:true,title:{display:true,text:'工资 ($)',font:{size:11}},ticks:{font:{size:10},callback:function(v){return '$'+v.toLocaleString()}}},
+        y1:{position:'right',min:0,max:60,title:{display:true,text:'加班工资占比 (%)',font:{size:11}},ticks:{font:{size:10},callback:function(v){return v+'%'}},grid:{drawOnChartArea:false}}
+      }
+    }
   });
-  const titlePrefix = selOrg4 ? selOrg4 : (chartAggKey === 'org4' ? '四级组织' : '五级组织');
+
+  // Chart 2: Unit cost per org4 (simplified — no 加班成本率)
+  if (charts.costEff) charts.costEff.destroy();
+  charts.costEff = new Chart(document.getElementById('chartCostEff'), {
+    type:'bar',
+    data:{
+      labels:costLabels,
+      datasets:[
+        {label:'单位工时成本 ($/h)',data:byOrg4.map(function(d){var t=d.regH+d.otH+d.lvH;var w=d.regW+d.otW+d.lvW;return t>0?+(w/t).toFixed(2):0}),backgroundColor:'#4285f4',borderRadius:4,yAxisID:'y'}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      onClick:function(evt,elements){if(elements.length>0){var idx=elements[0].index;showDrillDown(costLabels[idx],'org4')}},
+      plugins:{
+        legend:{position:'top',labels:{boxWidth:12,font:{size:11},usePointStyle:true,pointStyle:'circle'}},
+        tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': $'+ctx.raw.toLocaleString('en-US',{minimumFractionDigits:2})+'/h'}}}
+      },
+      scales:{
+        x:{ticks:{font:{size:11},maxRotation:45}},
+        y:{position:'left',title:{display:true,text:'$/h',font:{size:11}},ticks:{font:{size:10},callback:function(v){return '$'+v}}}
+      }
+    }
+  });
+}
+
+function updateHoursCharts(data) {
+  var byOrg4 = aggregate(data, 'org4');
+  var selOrg4 = document.getElementById('avgOt-org4').value;
+  var chartData = data;
+  var chartAggKey = 'org4';
+  if (selOrg4) { chartData = data.filter(function(d){return d.org4===selOrg4}); chartAggKey = 'org5'; }
+
+  var aggData = aggregate(chartData, chartAggKey).sort(function(a,b){
+    var avgA = a.hc>0?(a.regH+a.otH+a.lvH)/a.hc:0;
+    var avgB = b.hc>0?(b.regH+b.otH+b.lvH)/b.hc:0;
+    return avgB-avgA;
+  });
+  var titlePrefix = selOrg4 ? selOrg4 : (chartAggKey==='org4'?'四级组织':'五级组织');
   document.getElementById('avgOtTitle').textContent = titlePrefix + ' — 人均工时 & 加班率';
 
   if (charts.avgOt) charts.avgOt.destroy();
   charts.avgOt = new Chart(document.getElementById('chartAvgOt'), {
-    type: 'bar',
-    data: {
-      labels: aggData.map(d => d.name),
-      datasets: [
-        {
-          label: '人均总工时',
-          data: aggData.map(d => d.hc > 0 ? +((d.regH + d.otH + d.lvH) / d.hc).toFixed(1) : 0),
-          backgroundColor: '#4285f4',
-          borderRadius: 3,
-          yAxisID: 'y',
-          order: 2
-        },
-        {
-          label: '加班占比 %',
-          data: aggData.map(d => { const t = d.regH + d.otH + d.lvH; return t > 0 ? +(d.otH / t * 100).toFixed(1) : 0; }),
-          type: 'line',
-          borderColor: '#ea4335',
-          backgroundColor: 'rgba(234,67,53,.1)',
-          pointBackgroundColor: '#ea4335',
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          borderWidth: 2.5,
-          fill: false,
-          yAxisID: 'y1',
-          tension: 0.3,
-          order: 1
-        },
-        {
-          label: '人数',
-          data: aggData.map(d => d.hc),
-          type: 'line',
-          borderColor: '#34a853',
-          pointBackgroundColor: '#34a853',
-          pointRadius: 3,
-          borderWidth: 1.5,
-          borderDash: [4,3],
-          fill: false,
-          yAxisID: 'y2',
-          tension: 0.3,
-          order: 0,
-          hidden: true
-        }
+    type:'bar',
+    data:{
+      labels:aggData.map(function(d){return d.name}),
+      datasets:[
+        {label:'人均总工时',data:aggData.map(function(d){return d.hc>0?+((d.regH+d.otH+d.lvH)/d.hc).toFixed(1):0}),backgroundColor:'#4285f4',borderRadius:3,yAxisID:'y',order:2},
+        {label:'加班占比 %',data:aggData.map(function(d){var t=d.regH+d.otH+d.lvH;return t>0?+(d.otH/t*100).toFixed(1):0}),type:'line',borderColor:'#ea4335',backgroundColor:'rgba(234,67,53,.1)',pointBackgroundColor:'#ea4335',pointRadius:4,pointHoverRadius:6,borderWidth:2.5,fill:false,yAxisID:'y1',tension:0.3,order:1},
+        {label:'人数',data:aggData.map(function(d){return d.hc}),type:'line',borderColor:'#34a853',pointBackgroundColor:'#34a853',pointRadius:3,borderWidth:1.5,borderDash:[4,3],fill:false,yAxisID:'y2',tension:0.3,order:0,hidden:true}
       ]
     },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      onClick: (evt, elements) => {
-        if (elements.length > 0) {
-          const idx = elements[0].index;
-          const orgName = charts.avgOt.data.labels[idx];
-          showDrillDown(orgName, chartAggKey);
-        }
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      onClick:function(evt,elements){if(elements.length>0){var idx=elements[0].index;showDrillDown(charts.avgOt.data.labels[idx],chartAggKey)}},
+      plugins:{
+        legend:{position:'top',labels:{boxWidth:12,font:{size:11},usePointStyle:true,pointStyle:'circle'}},
+        tooltip:{callbacks:{afterBody:function(items){var i=items[0].dataIndex;var d=aggData[i];return '人数: '+d.hc+' | 常规: '+fmt(d.regH)+'h | 加班: '+fmt(d.otH)+'h | 有薪假: '+fmt(d.lvH)+'h'}}}
       },
-      plugins: {
-        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } },
-        tooltip: { callbacks: { afterBody: items => { const i = items[0].dataIndex; const d = aggData[i]; return `人数: ${d.hc} | 常规: ${fmt(d.regH)}h | 加班: ${fmt(d.otH)}h | 有薪假: ${fmt(d.lvH)}h`; } } }
-      },
-      scales: {
-        x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
-        y: { position: 'left', title: { display: true, text: '人均工时 (h)', font: { size: 11 } }, ticks: { font: { size: 10 } } },
-        y1: { position: 'right', min: 0, max: 60, title: { display: true, text: '加班占比 (%)', font: { size: 11 } }, ticks: { font: { size: 10 }, callback: v => v + '%' }, grid: { drawOnChartArea: false } },
-        y2: { display: false }
+      scales:{
+        x:{ticks:{font:{size:10},maxRotation:45}},
+        y:{position:'left',title:{display:true,text:'人均工时 (h)',font:{size:11}},ticks:{font:{size:10}}},
+        y1:{position:'right',min:0,max:60,title:{display:true,text:'加班占比 (%)',font:{size:11}},ticks:{font:{size:10},callback:function(v){return v+'%'}},grid:{drawOnChartArea:false}},
+        y2:{display:false}
       }
     }
   });
 
-  // --- NEW: Line Chart 1 — 工时总量趋势 ---
-  const org4Sorted = [...byOrg4].sort((a,b) => {
-    const ta = a.regH + a.otH + a.lvH, tb = b.regH + b.otH + b.lvH;
-    return tb - ta;
-  });
-  const lineLabels = org4Sorted.map(d => d.name);
-  const lineOpt = (extra) => ({
-    responsive: true, maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
-    onClick: (evt, elements) => {
-      if (elements.length > 0) {
-        const idx = elements[0].index;
-        showDrillDown(lineLabels[idx], 'org4');
+  var org4Sorted = byOrg4.slice().sort(function(a,b){var ta=a.regH+a.otH+a.lvH,tb=b.regH+b.otH+b.lvH;return tb-ta});
+  var lineLabels = org4Sorted.map(function(d){return d.name});
+  var lineOpt = function(extra) {
+    return Object.assign({
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      onClick:function(evt,elements){if(elements.length>0){var idx=elements[0].index;showDrillDown(lineLabels[idx],'org4')}},
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11},usePointStyle:true,pointStyle:'circle'}}},
+      scales:{
+        x:{ticks:{font:{size:10},maxRotation:35}},
+        y:{ticks:{font:{size:10}},title:{display:true,text:'工时 (h)',font:{size:11}}}
       }
-    },
-    plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } }, ...extra },
-    scales: {
-      x: { ticks: { font: { size: 10 }, maxRotation: 35 } },
-      y: { ticks: { font: { size: 10 } }, title: { display: true, text: '工时 (h)', font: { size: 11 } } }
-    }
-  });
+    }, extra||{});
+  };
 
   if (charts.lineHours) charts.lineHours.destroy();
   charts.lineHours = new Chart(document.getElementById('chartLineHours'), {
-    type: 'line',
-    data: {
-      labels: lineLabels,
-      datasets: [
-        { label: '总工时', data: org4Sorted.map(d => +(d.regH + d.otH + d.lvH).toFixed(1)), borderColor: '#1a73e8', backgroundColor: 'rgba(26,115,232,.08)', borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: '#1a73e8', fill: true, tension: 0.3 },
-        { label: '常规出勤工时', data: org4Sorted.map(d => +d.regH.toFixed(1)), borderColor: '#34a853', backgroundColor: 'rgba(52,168,83,.06)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#34a853', fill: false, tension: 0.3 },
-        { label: '加班工时', data: org4Sorted.map(d => +d.otH.toFixed(1)), borderColor: '#ea4335', backgroundColor: 'rgba(234,67,53,.06)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#ea4335', fill: false, tension: 0.3, borderDash: [6,3] },
-        { label: '有薪假工时', data: org4Sorted.map(d => +d.lvH.toFixed(1)), borderColor: '#a142f4', backgroundColor: 'rgba(161,66,244,.06)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#a142f4', fill: false, tension: 0.3, borderDash: [3,3] }
+    type:'line',
+    data:{
+      labels:lineLabels,
+      datasets:[
+        {label:'总工时',data:org4Sorted.map(function(d){return +(d.regH+d.otH+d.lvH).toFixed(1)}),borderColor:'#1a73e8',backgroundColor:'rgba(26,115,232,.08)',borderWidth:2.5,pointRadius:5,pointHoverRadius:7,pointBackgroundColor:'#1a73e8',fill:true,tension:0.3},
+        {label:'常规出勤工时',data:org4Sorted.map(function(d){return +d.regH.toFixed(1)}),borderColor:'#34a853',borderWidth:2,pointRadius:4,pointBackgroundColor:'#34a853',fill:false,tension:0.3},
+        {label:'加班工时',data:org4Sorted.map(function(d){return +d.otH.toFixed(1)}),borderColor:'#ea4335',borderWidth:2,pointRadius:4,pointBackgroundColor:'#ea4335',fill:false,tension:0.3,borderDash:[6,3]},
+        {label:'有薪假工时',data:org4Sorted.map(function(d){return +d.lvH.toFixed(1)}),borderColor:'#a142f4',borderWidth:2,pointRadius:4,pointBackgroundColor:'#a142f4',fill:false,tension:0.3,borderDash:[3,3]}
       ]
     },
-    options: lineOpt({
-      plugins: {
-        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } },
-        tooltip: { callbacks: { afterBody: items => { const i = items[0].dataIndex; const d = org4Sorted[i]; return `人数: ${d.hc} 人`; } } }
+    options:lineOpt({
+      plugins:{
+        legend:{position:'top',labels:{boxWidth:10,font:{size:11},usePointStyle:true,pointStyle:'circle'}},
+        tooltip:{callbacks:{afterBody:function(items){var i=items[0].dataIndex;var d=org4Sorted[i];return '人数: '+d.hc+' 人'}}}
       }
     })
   });
 
-  // --- NEW: Line Chart 2 — 人均指标 ---
   if (charts.lineAvg) charts.lineAvg.destroy();
   charts.lineAvg = new Chart(document.getElementById('chartLineAvg'), {
-    type: 'line',
-    data: {
-      labels: lineLabels,
-      datasets: [
-        { label: '人均总工时', data: org4Sorted.map(d => d.hc > 0 ? +((d.regH + d.otH + d.lvH) / d.hc).toFixed(1) : 0), borderColor: '#1a73e8', borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: '#1a73e8', fill: false, tension: 0.3 },
-        { label: '人均常规工时', data: org4Sorted.map(d => d.hc > 0 ? +(d.regH / d.hc).toFixed(1) : 0), borderColor: '#34a853', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#34a853', fill: false, tension: 0.3 },
-        { label: '人均加班工时', data: org4Sorted.map(d => d.hc > 0 ? +(d.otH / d.hc).toFixed(1) : 0), borderColor: '#ea4335', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#ea4335', fill: false, tension: 0.3, borderDash: [6,3] },
-        { label: '人均有薪假工时', data: org4Sorted.map(d => d.hc > 0 ? +(d.lvH / d.hc).toFixed(1) : 0), borderColor: '#a142f4', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#a142f4', fill: false, tension: 0.3, borderDash: [3,3] }
+    type:'line',
+    data:{
+      labels:lineLabels,
+      datasets:[
+        {label:'人均总工时',data:org4Sorted.map(function(d){return d.hc>0?+((d.regH+d.otH+d.lvH)/d.hc).toFixed(1):0}),borderColor:'#1a73e8',borderWidth:2.5,pointRadius:5,pointHoverRadius:7,pointBackgroundColor:'#1a73e8',fill:false,tension:0.3},
+        {label:'人均常规工时',data:org4Sorted.map(function(d){return d.hc>0?+(d.regH/d.hc).toFixed(1):0}),borderColor:'#34a853',borderWidth:2,pointRadius:4,pointBackgroundColor:'#34a853',fill:false,tension:0.3},
+        {label:'人均加班工时',data:org4Sorted.map(function(d){return d.hc>0?+(d.otH/d.hc).toFixed(1):0}),borderColor:'#ea4335',borderWidth:2,pointRadius:4,pointBackgroundColor:'#ea4335',fill:false,tension:0.3,borderDash:[6,3]},
+        {label:'人均有薪假工时',data:org4Sorted.map(function(d){return d.hc>0?+(d.lvH/d.hc).toFixed(1):0}),borderColor:'#a142f4',borderWidth:2,pointRadius:4,pointBackgroundColor:'#a142f4',fill:false,tension:0.3,borderDash:[3,3]}
       ]
     },
-    options: lineOpt()
+    options:lineOpt()
   });
 
-  // --- NEW: Line Chart 3 — 效率与负荷 ---
-  const otCountByOrg4 = {};
-  data.forEach(d => { const k = d.org4 || '(未分配)'; if (!otCountByOrg4[k]) otCountByOrg4[k] = 0; if (d.overtimeH > 0) otCountByOrg4[k]++; });
-  const lvCountByOrg4 = {};
-  data.forEach(d => { const k = d.org4 || '(未分配)'; if (!lvCountByOrg4[k]) lvCountByOrg4[k] = 0; if (d.leaveH > 0) lvCountByOrg4[k]++; });
+  var otCountByOrg4={};var lvCountByOrg4={};
+  data.forEach(function(d){var k=d.org4||'(未分配)';if(!otCountByOrg4[k])otCountByOrg4[k]=0;if(d.overtimeH>0)otCountByOrg4[k]++;if(!lvCountByOrg4[k])lvCountByOrg4[k]=0;if(d.leaveH>0)lvCountByOrg4[k]++});
 
   if (charts.lineRate) charts.lineRate.destroy();
   charts.lineRate = new Chart(document.getElementById('chartLineRate'), {
-    type: 'line',
-    data: {
-      labels: lineLabels,
-      datasets: [
-        { label: '加班率 (%)', data: org4Sorted.map(d => { const t = d.regH + d.otH + d.lvH; return t > 0 ? +(d.otH / t * 100).toFixed(1) : 0; }), borderColor: '#ea4335', borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: '#ea4335', fill: false, tension: 0.3, yAxisID: 'y' },
-        { label: '加班人数占比 (%)', data: org4Sorted.map(d => d.hc > 0 ? +((otCountByOrg4[d.name] || 0) / d.hc * 100).toFixed(1) : 0), borderColor: '#ff6d01', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#ff6d01', fill: false, tension: 0.3, borderDash: [6,3], yAxisID: 'y' },
-        { label: '有薪假人数占比 (%)', data: org4Sorted.map(d => d.hc > 0 ? +((lvCountByOrg4[d.name] || 0) / d.hc * 100).toFixed(1) : 0), borderColor: '#a142f4', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#a142f4', fill: false, tension: 0.3, borderDash: [3,3], yAxisID: 'y' },
-        { label: '常规工时占比 (%)', data: org4Sorted.map(d => { const t = d.regH + d.otH + d.lvH; return t > 0 ? +(d.regH / t * 100).toFixed(1) : 0; }), borderColor: '#34a853', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#34a853', fill: false, tension: 0.3, yAxisID: 'y1' }
+    type:'line',
+    data:{
+      labels:lineLabels,
+      datasets:[
+        {label:'加班率 (%)',data:org4Sorted.map(function(d){var t=d.regH+d.otH+d.lvH;return t>0?+(d.otH/t*100).toFixed(1):0}),borderColor:'#ea4335',borderWidth:2.5,pointRadius:5,pointHoverRadius:7,pointBackgroundColor:'#ea4335',fill:false,tension:0.3,yAxisID:'y'},
+        {label:'加班人数占比 (%)',data:org4Sorted.map(function(d){return d.hc>0?+((otCountByOrg4[d.name]||0)/d.hc*100).toFixed(1):0}),borderColor:'#ff6d01',borderWidth:2,pointRadius:4,pointBackgroundColor:'#ff6d01',fill:false,tension:0.3,borderDash:[6,3],yAxisID:'y'},
+        {label:'有薪假人数占比 (%)',data:org4Sorted.map(function(d){return d.hc>0?+((lvCountByOrg4[d.name]||0)/d.hc*100).toFixed(1):0}),borderColor:'#a142f4',borderWidth:2,pointRadius:4,pointBackgroundColor:'#a142f4',fill:false,tension:0.3,borderDash:[3,3],yAxisID:'y'},
+        {label:'常规工时占比 (%)',data:org4Sorted.map(function(d){var t=d.regH+d.otH+d.lvH;return t>0?+(d.regH/t*100).toFixed(1):0}),borderColor:'#34a853',borderWidth:2,pointRadius:4,pointBackgroundColor:'#34a853',fill:false,tension:0.3,yAxisID:'y1'}
       ]
     },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      onClick: (evt, elements) => {
-        if (elements.length > 0) {
-          const idx = elements[0].index;
-          showDrillDown(lineLabels[idx], 'org4');
-        }
-      },
-      plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } } },
-      scales: {
-        x: { ticks: { font: { size: 10 }, maxRotation: 35 } },
-        y: { position: 'left', min: 0, max: 100, title: { display: true, text: '加班/人员占比 (%)', font: { size: 11 } }, ticks: { font: { size: 10 }, callback: v => v + '%' } },
-        y1: { position: 'right', min: 50, max: 100, title: { display: true, text: '常规工时占比 (%)', font: { size: 11 } }, ticks: { font: { size: 10 }, callback: v => v + '%' }, grid: { drawOnChartArea: false } }
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      onClick:function(evt,elements){if(elements.length>0){var idx=elements[0].index;showDrillDown(lineLabels[idx],'org4')}},
+      plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11},usePointStyle:true,pointStyle:'circle'}}},
+      scales:{
+        x:{ticks:{font:{size:10},maxRotation:35}},
+        y:{position:'left',min:0,max:100,title:{display:true,text:'加班/人员占比 (%)',font:{size:11}},ticks:{font:{size:10},callback:function(v){return v+'%'}}},
+        y1:{position:'right',min:50,max:100,title:{display:true,text:'常规工时占比 (%)',font:{size:11}},ticks:{font:{size:10},callback:function(v){return v+'%'}},grid:{drawOnChartArea:false}}
       }
     }
   });
 }
 
 function updateTables(data) {
-  // Org4 table
-  const by4 = aggregate(data, 'org4');
-  let h4 = `<thead><tr><th>四级组织</th><th class="num">人数</th><th class="num">常规工时</th><th class="num">加班工时</th><th class="num">有薪假工时</th><th class="num">总工时</th><th class="num">人均工时</th><th class="num">加班率</th></tr></thead><tbody>`;
-  by4.forEach(d => {
-    const t = d.regH + d.otH + d.lvH;
-    const avg = d.hc > 0 ? t / d.hc : 0;
-    const r = t > 0 ? d.otH / t * 100 : 0;
-    const tag = r > 25 ? 'tag-high' : r > 15 ? 'tag-mid' : 'tag-low';
-    h4 += `<tr><td>${d.name}</td><td class="num">${d.hc}</td><td class="num">${fmt(d.regH)}</td><td class="num">${fmt(d.otH)}</td><td class="num">${fmt(d.lvH)}</td><td class="num">${fmt(t)}</td><td class="num">${fmt(avg)}</td><td class="num"><span class="tag ${tag}">${r.toFixed(1)}%</span></td></tr>`;
+  var by4 = aggregate(data,'org4');
+  var h4 = '<thead><tr><th>四级组织</th><th class="num">人数</th><th class="num">工资总额</th><th class="num">人均工资</th><th class="num">加班工资占比</th><th class="num">总工时</th><th class="num">人均工时</th><th class="num">加班率</th></tr></thead><tbody>';
+  by4.forEach(function(d){
+    var t=d.regH+d.otH+d.lvH;var avg=d.hc>0?t/d.hc:0;var r=t>0?d.otH/t*100:0;
+    var tw=d.regW+d.otW+d.lvW;var aw=d.hc>0?tw/d.hc:0;var owr=tw>0?d.otW/tw*100:0;
+    var tag=r>25?'tag-high':r>15?'tag-mid':'tag-low';
+    h4+='<tr><td>'+d.name+'</td><td class="num">'+d.hc+'</td><td class="num">'+fmtD(tw)+'</td><td class="num">'+fmtD(aw)+'</td><td class="num">'+owr.toFixed(1)+'%</td><td class="num">'+fmt(t)+'</td><td class="num">'+fmt(avg)+'</td><td class="num"><span class="tag '+tag+'">'+r.toFixed(1)+'%</span></td></tr>';
   });
-  // Total row
-  const tReg = by4.reduce((s,d)=>s+d.regH,0), tOt = by4.reduce((s,d)=>s+d.otH,0), tLv = by4.reduce((s,d)=>s+d.lvH,0);
-  const tHc = by4.reduce((s,d)=>s+d.hc,0), tAll = tReg+tOt+tLv;
-  h4 += `<tr style="font-weight:600;background:#f8f9fa"><td>合计</td><td class="num">${tHc}</td><td class="num">${fmt(tReg)}</td><td class="num">${fmt(tOt)}</td><td class="num">${fmt(tLv)}</td><td class="num">${fmt(tAll)}</td><td class="num">${tHc>0?fmt(tAll/tHc):'-'}</td><td class="num">${tAll>0?(tOt/tAll*100).toFixed(1):'0'}%</td></tr>`;
-  h4 += '</tbody>';
-  document.getElementById('tblOrg4').innerHTML = h4;
+  var tHc=by4.reduce(function(s,d){return s+d.hc},0);
+  var tReg=by4.reduce(function(s,d){return s+d.regH},0),tOt=by4.reduce(function(s,d){return s+d.otH},0),tLv=by4.reduce(function(s,d){return s+d.lvH},0);
+  var tAll=tReg+tOt+tLv;
+  var tRegW=by4.reduce(function(s,d){return s+d.regW},0),tOtW=by4.reduce(function(s,d){return s+d.otW},0),tLvW=by4.reduce(function(s,d){return s+d.lvW},0);
+  var tW=tRegW+tOtW+tLvW;
+  h4+='<tr style="font-weight:600;background:#f8f9fa"><td>合计</td><td class="num">'+tHc+'</td><td class="num">'+fmtD(tW)+'</td><td class="num">'+(tHc>0?fmtD(tW/tHc):'-')+'</td><td class="num">'+(tW>0?(tOtW/tW*100).toFixed(1):'0')+'%</td><td class="num">'+fmt(tAll)+'</td><td class="num">'+(tHc>0?fmt(tAll/tHc):'-')+'</td><td class="num">'+(tAll>0?(tOt/tAll*100).toFixed(1):'0')+'%</td></tr>';
+  h4+='</tbody>';
+  document.getElementById('tblOrg4').innerHTML=h4;
 
-  // Org5 table
-  const by5 = aggregate(data, 'org5');
-  let h5 = `<thead><tr><th>五级组织</th><th>所属四级</th><th class="num">人数</th><th class="num">常规工时</th><th class="num">加班工时</th><th class="num">有薪假工时</th><th class="num">总工时</th><th class="num">人均工时</th><th class="num">加班率</th></tr></thead><tbody>`;
-  by5.forEach(d => {
-    const parent = data.find(r => (r.org5 || '(未分配)') === d.name);
-    const pName = parent ? (parent.org4 || '-') : '-';
-    const t = d.regH + d.otH + d.lvH;
-    const avg = d.hc > 0 ? t / d.hc : 0;
-    const r = t > 0 ? d.otH / t * 100 : 0;
-    const tag = r > 25 ? 'tag-high' : r > 15 ? 'tag-mid' : 'tag-low';
-    h5 += `<tr><td>${d.name}</td><td>${pName}</td><td class="num">${d.hc}</td><td class="num">${fmt(d.regH)}</td><td class="num">${fmt(d.otH)}</td><td class="num">${fmt(d.lvH)}</td><td class="num">${fmt(t)}</td><td class="num">${fmt(avg)}</td><td class="num"><span class="tag ${tag}">${r.toFixed(1)}%</span></td></tr>`;
+  var by5=aggregate(data,'org5');
+  var h5='<thead><tr><th>五级组织</th><th>所属四级</th><th class="num">人数</th><th class="num">工资总额</th><th class="num">人均工资</th><th class="num">加班工资占比</th><th class="num">总工时</th><th class="num">人均工时</th><th class="num">加班率</th></tr></thead><tbody>';
+  by5.forEach(function(d){
+    var parent=data.find(function(r){return (r.org5||'(未分配)')===d.name});
+    var pName=parent?(parent.org4||'-'):'-';
+    var t=d.regH+d.otH+d.lvH;var avg=d.hc>0?t/d.hc:0;var r=t>0?d.otH/t*100:0;
+    var tw=d.regW+d.otW+d.lvW;var aw=d.hc>0?tw/d.hc:0;var owr=tw>0?d.otW/tw*100:0;
+    var tag=r>25?'tag-high':r>15?'tag-mid':'tag-low';
+    h5+='<tr><td>'+d.name+'</td><td>'+pName+'</td><td class="num">'+d.hc+'</td><td class="num">'+fmtD(tw)+'</td><td class="num">'+fmtD(aw)+'</td><td class="num">'+owr.toFixed(1)+'%</td><td class="num">'+fmt(t)+'</td><td class="num">'+fmt(avg)+'</td><td class="num"><span class="tag '+tag+'">'+r.toFixed(1)+'%</span></td></tr>';
   });
-  h5 += '</tbody>';
-  document.getElementById('tblOrg5').innerHTML = h5;
+  h5+='</tbody>';
+  document.getElementById('tblOrg5').innerHTML=h5;
 
-  // Detail table — always show all filtered data
-  let hd = `<thead><tr><th>工号</th><th>姓名</th><th>所属公司</th><th>四级组织</th><th>五级组织</th><th class="num">常规工时</th><th class="num">加班工时</th><th class="num">有薪假工时</th><th class="num">总工时</th></tr></thead><tbody>`;
-  data.sort((a,b) => (b.regularH + b.overtimeH + b.leaveH) - (a.regularH + a.overtimeH + a.leaveH)).forEach(d => {
-    hd += `<tr><td>${d.empId}</td><td>${d.name}</td><td>${d.company}</td><td>${d.org4||'-'}</td><td>${d.org5||'-'}</td><td class="num">${fmt(d.regularH)}</td><td class="num">${fmt(d.overtimeH)}</td><td class="num">${fmt(d.leaveH)}</td><td class="num">${fmt(d.regularH+d.overtimeH+d.leaveH)}</td></tr>`;
+  var hd='<thead><tr><th>工号</th><th>姓名</th><th>公司</th><th>四级</th><th>五级</th><th>薪酬</th><th class="num">常规工时</th><th class="num">加班工时</th><th class="num">有薪假</th><th class="num">总工时</th><th class="num">常规工资</th><th class="num">加班工资</th><th class="num">有薪假工资</th><th class="num">总工资</th></tr></thead><tbody>';
+  data.slice().sort(function(a,b){return ((b.regularW||0)+(b.overtimeW||0)+(b.leaveW||0))-((a.regularW||0)+(a.overtimeW||0)+(a.leaveW||0))}).forEach(function(d){
+    var rateStr = d.payType==='年薪' ? '$'+Math.round(d.payRate).toLocaleString()+'/yr' : '$'+d.payRate+'/hr';
+    hd+='<tr><td>'+d.empId+'</td><td>'+d.name+'</td><td>'+d.company+'</td><td>'+(d.org4||'-')+'</td><td>'+(d.org5||'-')+'</td><td>'+rateStr+'</td><td class="num">'+fmt(d.regularH)+'</td><td class="num">'+fmt(d.overtimeH)+'</td><td class="num">'+fmt(d.leaveH)+'</td><td class="num">'+fmt(d.regularH+d.overtimeH+d.leaveH)+'</td><td class="num">'+fmtD(d.regularW||0)+'</td><td class="num">'+fmtD(d.overtimeW||0)+'</td><td class="num">'+fmtD(d.leaveW||0)+'</td><td class="num">'+fmtD((d.regularW||0)+(d.overtimeW||0)+(d.leaveW||0))+'</td></tr>';
   });
-  hd += '</tbody>';
-  document.getElementById('tblDetail').innerHTML = hd;
+  hd+='</tbody>';
+  document.getElementById('tblDetail').innerHTML=hd;
 }
 
 function showDrillDown(orgName, orgKey) {
-  let employees;
-  let label;
+  var employees, label;
   if (orgKey === 'org4') {
-    employees = DATA.filter(d => (d.org4 || '(未分配)') === orgName);
+    employees = DATA.filter(function(d){return (d.org4||'(未分配)')===orgName});
     label = '四级组织: ' + orgName;
   } else {
-    employees = DATA.filter(d => (d.org5 || '(未分配)') === orgName);
+    employees = DATA.filter(function(d){return (d.org5||'(未分配)')===orgName});
     label = '五级组织: ' + orgName;
   }
+  var hc = employees.length;
+  var totalW = employees.reduce(function(s,d){return s+(d.regularW||0)+(d.overtimeW||0)+(d.leaveW||0)},0);
+  document.getElementById('drillModalTitle').textContent = label + ' (' + hc + '名员工 · 工资总额 ' + fmtD(totalW) + ')';
 
-  document.getElementById('drillModalTitle').textContent = label + ' (' + employees.length + '名员工)';
-
-  var hd = '<thead><tr><th>工号</th><th>姓名</th><th>所属公司</th><th>四级组织</th><th>五级组织</th><th class="num">常规工时</th><th class="num">加班工时</th><th class="num">有薪假工时</th><th class="num">总工时</th></tr></thead><tbody>';
-  employees.sort(function(a,b) { return (b.regularH + b.overtimeH + b.leaveH) - (a.regularH + a.overtimeH + a.leaveH); }).forEach(function(d) {
-    hd += '<tr><td>' + d.empId + '</td><td>' + d.name + '</td><td>' + d.company + '</td><td>' + (d.org4||'-') + '</td><td>' + (d.org5||'-') + '</td><td class="num">' + fmt(d.regularH) + '</td><td class="num">' + fmt(d.overtimeH) + '</td><td class="num">' + fmt(d.leaveH) + '</td><td class="num">' + fmt(d.regularH+d.overtimeH+d.leaveH) + '</td></tr>';
+  var hd = '<thead><tr><th>工号</th><th>姓名</th><th>公司</th><th>四级</th><th>五级</th><th>薪酬</th><th class="num">常规工时</th><th class="num">加班工时</th><th class="num">有薪假</th><th class="num">总工时</th><th class="num">常规工资</th><th class="num">加班工资</th><th class="num">总工资</th></tr></thead><tbody>';
+  employees.sort(function(a,b){return ((b.regularW||0)+(b.overtimeW||0)+(b.leaveW||0))-((a.regularW||0)+(a.overtimeW||0)+(a.leaveW||0))}).forEach(function(d){
+    var rateStr = d.payType==='年薪' ? '$'+Math.round(d.payRate).toLocaleString()+'/yr' : '$'+d.payRate+'/hr';
+    hd += '<tr><td>'+d.empId+'</td><td>'+d.name+'</td><td>'+d.company+'</td><td>'+(d.org4||'-')+'</td><td>'+(d.org5||'-')+'</td><td>'+rateStr+'</td><td class="num">'+fmt(d.regularH)+'</td><td class="num">'+fmt(d.overtimeH)+'</td><td class="num">'+fmt(d.leaveH)+'</td><td class="num">'+fmt(d.regularH+d.overtimeH+d.leaveH)+'</td><td class="num">'+fmtD(d.regularW||0)+'</td><td class="num">'+fmtD(d.overtimeW||0)+'</td><td class="num">'+fmtD((d.regularW||0)+(d.overtimeW||0)+(d.leaveW||0))+'</td></tr>';
   });
   hd += '</tbody>';
   document.getElementById('drillModalTable').innerHTML = hd;
-
   document.getElementById('drillModal').style.display = 'flex';
 }
 
