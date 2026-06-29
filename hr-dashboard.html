@@ -37,7 +37,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .chart-full{grid-column:1/-1}
 .footer{text-align:center;padding:16px;font-size:11px;color:#aaa}
 .note{background:#fff3e0;border-left:4px solid #ff9800;padding:10px 16px;border-radius:4px;margin-bottom:16px;font-size:12px;color:#6d4c00}
-@media(max-width:900px){.chart-grid{grid-template-columns:1fr}.header{padding:14px 16px}.content{padding:14px 16px}}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:12px;width:90%;max-width:900px;max-height:80vh;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal-header{padding:16px 20px;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:16px;font-weight:600;color:#1a237e}
+.modal-close{cursor:pointer;font-size:20px;color:#999;border:none;background:none;padding:4px 8px}
+.modal-close:hover{color:#333}
+.modal-body{padding:16px 20px;overflow-y:auto;max-height:calc(80vh - 60px)}
+.detail-table{width:100%;border-collapse:collapse;font-size:12px}
+.detail-table th{background:#f5f5f5;padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid #ddd;white-space:nowrap}
+.detail-table td{padding:6px 10px;border-bottom:1px solid #eee}
+.detail-table tr:hover{background:#f8f9fa}
+.detail-table .num{text-align:right}
+@media(max-width:900px){.chart-grid{grid-template-columns:1fr}.header{padding:14px 16px}.content{padding:14px 16px}.modal{width:95%}}
 </style>
 </head>
 <body>
@@ -61,11 +74,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <div id="tab1" class="tab-panel active">
   <div class="kpi-row" id="kpi1"></div>
   <div class="chart-grid">
+    <div class="chart-card chart-full"><h3>入职 / 离职趋势（2026年1月 - 6月）</h3><div class="chart-wrap"><canvas id="c1trend"></canvas></div></div>
     <div class="chart-card"><h3>各四级部门人数分布</h3><div class="chart-wrap"><canvas id="c1dept"></canvas></div></div>
-    <div class="chart-card"><h3>人员状态构成</h3><div class="chart-wrap"><canvas id="c1status"></canvas></div></div>
-    <div class="chart-card chart-full"><h3>入职趋势（按月）</h3><div class="chart-wrap"><canvas id="c1hire"></canvas></div></div>
     <div class="chart-card"><h3>司龄分布</h3><div class="chart-wrap short"><canvas id="c1tenure"></canvas></div></div>
     <div class="chart-card"><h3>年龄分布</h3><div class="chart-wrap short"><canvas id="c1age"></canvas></div></div>
+    <div class="chart-card"><h3>各四级部门人数占比</h3><div class="chart-wrap short"><canvas id="c1pie"></canvas></div></div>
   </div>
 </div>
 
@@ -94,6 +107,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 
 </div>
 
+<!-- Drill-down Modal -->
+<div class="modal-overlay" id="drillModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="drillTitle">明细</h3>
+      <button class="modal-close" onclick="closeDrill()">&times;</button>
+    </div>
+    <div class="modal-body" id="drillBody"></div>
+  </div>
+</div>
+
 <div class="footer">DO数字运营部 月度人力情况看板 &middot; 数据截至 2026年6月</div>
 
 <script>
@@ -104,6 +128,45 @@ function destroy(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
 function fmt(n){return n.toLocaleString('zh-CN',{maximumFractionDigits:1})}
 function fmtPct(n){return n.toFixed(1)+'%'}
 
+// Drill-down modal
+function showDrill(title, employees) {
+  document.getElementById('drillTitle').textContent = title + ' (' + employees.length + '人)';
+  var h = '<table class="detail-table"><thead><tr><th>工号</th><th>姓名</th><th>四级部门</th><th>五级部门</th><th>状态</th><th>入职月份</th><th>司龄(年)</th><th>年龄</th></tr></thead><tbody>';
+  employees.forEach(function(r) {
+    h += '<tr><td>'+r[0]+'</td><td>'+(r[0])+'</td><td>'+(r[2]||'-')+'</td><td>'+(r[3]||'-')+'</td><td>'+r[1]+'</td><td>'+(r[4]||'-')+'</td><td>'+r[8]+'</td><td>'+(r[7]||'-')+'</td></tr>';
+  });
+  h += '</tbody></table>';
+  document.getElementById('drillBody').innerHTML = h;
+  document.getElementById('drillModal').classList.add('show');
+}
+function showDrillMonthly(title, records) {
+  document.getElementById('drillTitle').textContent = title + ' (' + records.length + '人)';
+  var h = '<table class="detail-table"><thead><tr><th>工号</th><th>四级部门</th><th>应出勤</th><th>实出勤</th><th>迟到</th><th>加班(h)</th><th>年假</th><th>事假</th><th>调休</th></tr></thead><tbody>';
+  records.forEach(function(r) {
+    h += '<tr><td>'+r[0]+'</td><td>'+(r[2]||'-')+'</td><td class="num">'+r[3]+'</td><td class="num">'+r[4]+'</td><td class="num">'+r[5]+'</td><td class="num">'+r[6]+'</td><td class="num">'+r[11]+'</td><td class="num">'+r[12]+'</td><td class="num">'+r[14]+'</td></tr>';
+  });
+  h += '</tbody></table>';
+  document.getElementById('drillBody').innerHTML = h;
+  document.getElementById('drillModal').classList.add('show');
+}
+function showDrillPerf(title, records) {
+  document.getElementById('drillTitle').textContent = title + ' (' + records.length + '人)';
+  var h = '<table class="detail-table"><thead><tr><th>工号</th><th>四级部门</th><th>部门</th><th>绩效分</th><th>等级</th><th>状态</th></tr></thead><tbody>';
+  records.forEach(function(r) {
+    h += '<tr><td>'+r[0]+'</td><td>'+(r[3]||'-')+'</td><td>'+(r[2]||'-')+'</td><td class="num">'+(r[4]!==null?r[4]:'-')+'</td><td>'+r[5]+'</td><td>'+r[6]+'</td></tr>';
+  });
+  h += '</tbody></table>';
+  document.getElementById('drillBody').innerHTML = h;
+  document.getElementById('drillModal').classList.add('show');
+}
+function closeDrill() {
+  document.getElementById('drillModal').classList.remove('show');
+}
+document.getElementById('drillModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDrill();
+});
+
+// Filters
 function initFilters(){
   var months=new Set();
   DATA.R.forEach(function(r){if(r[4])months.add(r[4])});
@@ -125,19 +188,9 @@ function initFilters(){
   });
 }
 
-function aggregate(arr,keyFn){
-  var map={};
-  arr.forEach(function(r){var k=keyFn(r);if(!map[k])map[k]={count:0,sum:0};map[k].count++});
-  return Object.keys(map).sort().map(function(k){return{name:k,count:map[k].count,sum:map[k].sum}});
-}
-
 function getMonthlyFiltered(month,d4){
   var data=DATA.M;
-  if(month){
-    data=data.filter(function(r){
-      var rm=r[1].replace('/','-');var fm=month.replace('/','-');return rm===fm;
-    });
-  }
+  if(month){data=data.filter(function(r){return r[1].replace('/','-')===month.replace('/','-')})}
   if(d4)data=data.filter(function(r){return r[2]===d4});
   return data;
 }
@@ -145,17 +198,18 @@ function getMonthlyFiltered(month,d4){
 function getPerfFiltered(month,d4){
   var data=DATA.P;
   if(month){
-    var monthMap={'一月':'01','二月':'02','三月':'03','四月':'04','五月':'05','六月':'06','七月':'07','八月':'08','九月':'09','十月':'10','十一月':'11','十二月':'12'};
-    var targetNum='';
-    if(month.indexOf('-')>-1){targetNum=month.split('-')[1]}
-    else if(month.indexOf('/')>-1){targetNum=month.split('/')[1]}
-    else{targetNum=monthMap[month]||month}
-    data=data.filter(function(r){var pNum=monthMap[r[1]]||r[1];return pNum===targetNum});
+    var mm={'一月':'01','二月':'02','三月':'03','四月':'04','五月':'05','六月':'06','七月':'07','八月':'08','九月':'09','十月':'10','十一月':'11','十二月':'12'};
+    var tn='';
+    if(month.indexOf('-')>-1){tn=month.split('-')[1]}
+    else if(month.indexOf('/')>-1){tn=month.split('/')[1]}
+    else{tn=mm[month]||month}
+    data=data.filter(function(r){return(mm[r[1]]||r[1])===tn});
   }
   if(d4)data=data.filter(function(r){return r[3]===d4});
   return data;
 }
 
+// Tab switching
 document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click',function(){
     document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
@@ -171,58 +225,155 @@ function update(){
   updateTab1(month,d4);updateTab2(month,d4);updateTab3(month,d4);
 }
 
+// === Tab1: Personnel Dynamics ===
 function updateTab1(month,d4){
-  var allRoster=DATA.R;
-  if(d4)allRoster=allRoster.filter(function(r){return r[2]===d4});
-  var active=allRoster;
-  if(month){active=active.filter(function(r){if(!r[4])return true;return r[4]<=month})}
+  var all=DATA.R;
+  if(d4)all=all.filter(function(r){return r[2]===d4});
+  var active=all.filter(function(r){if(!r[4])return true;return r[4]<=month});
   var total=active.length;
   var trial=active.filter(function(r){return r[1]==='试用'}).length;
   var formal=total-trial;
-  var hired=0,confirmed=0;
-  allRoster.forEach(function(r){
-    if(month&&r[4]===month)hired++;
-    if(month&&r[5]===month)confirmed++;
-  });
-  if(!month){hired=allRoster.length;confirmed=allRoster.filter(function(r){return r[5]}).length}
 
-  var mLabel=month?(month.indexOf('-')>-1?month.split('-').join('年').replace(/年(\d+)$/,'年$1月')+'':month):'全部';
+  // Count hire/confirm for selected month
+  var hired=0,confirmed=0;
+  if(month){
+    all.forEach(function(r){
+      if(r[4]===month)hired++;
+      if(r[5]===month)confirmed++;
+    });
+  }
 
   document.getElementById('kpi1').innerHTML=
     '<div class="kpi"><div class="kpi-label">在职人数</div><div class="kpi-value">'+total+'</div><div class="kpi-sub">正式 '+formal+' · 试用 '+trial+'</div></div>'+
-    '<div class="kpi"><div class="kpi-label">入职人数</div><div class="kpi-value green">'+hired+'</div><div class="kpi-sub">'+mLabel+'</div></div>'+
-    '<div class="kpi"><div class="kpi-label">转正人数</div><div class="kpi-value green">'+confirmed+'</div><div class="kpi-sub">'+mLabel+'</div></div>'+
+    '<div class="kpi"><div class="kpi-label">本月入职</div><div class="kpi-value green">'+(month?hired:'-')+'</div></div>'+
+    '<div class="kpi"><div class="kpi-label">本月转正</div><div class="kpi-value green">'+(month?confirmed:'-')+'</div></div>'+
     '<div class="kpi"><div class="kpi-label">试用占比</div><div class="kpi-value orange">'+fmtPct(total>0?trial/total*100:0)+'</div></div>';
 
+  // Chart: 入职/离职趋势 (line, Jan-Jun 2026)
+  var trendMonths=['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'];
+  var trendLabels=['1月','2月','3月','4月','5月','6月'];
+  var hireData=trendMonths.map(function(m){var c=0;all.forEach(function(r){if(r[4]===m)c++});return c});
+  // Departure: currently no data, show 0s (will auto-fill when data is added)
+  var leaveData=trendMonths.map(function(m){
+    var c=0;
+    all.forEach(function(r){
+      // Check field 9 or other departure indicators - currently none
+      // Placeholder for future departure date field
+    });
+    return c;
+  });
+  // Cumulative headcount
+  var baseCount=0;
+  all.forEach(function(r){if(r[4]&&r[4]<'2026-01')baseCount++});
+  var cumData=[];var cum=baseCount;
+  trendMonths.forEach(function(m,i){cum+=hireData[i]-leaveData[i];cumData.push(cum)});
+
+  destroy('c1trend');
+  charts.c1trend=new Chart(document.getElementById('c1trend'),{
+    type:'line',
+    data:{labels:trendLabels,datasets:[
+      {label:'入职人数',data:hireData,borderColor:'#2e7d32',backgroundColor:'rgba(46,125,50,.1)',fill:true,tension:.3,pointRadius:5,pointHoverRadius:7},
+      {label:'离职人数',data:leaveData,borderColor:'#c62828',backgroundColor:'rgba(198,40,40,.1)',fill:true,tension:.3,pointRadius:5,pointHoverRadius:7,borderDash:[]},
+      {label:'累计人数',data:cumData,borderColor:'#1a237e',backgroundColor:'transparent',tension:.3,pointRadius:4,yAxisID:'y1',borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11},usePointStyle:true,pointStyle:'circle'}}},
+      scales:{
+        y:{position:'left',beginAtZero:true,title:{display:true,text:'人数'},ticks:{stepSize:1}},
+        y1:{position:'right',title:{display:true,text:'累计人数'},grid:{drawOnChartArea:false}}
+      }
+    }
+  });
+
+  // Chart: 各四级部门人数 (bar with drill-down)
   var byDept={};
-  active.forEach(function(r){var d=r[2]||'(未分配)';byDept[d]=(byDept[d]||0)+1});
-  var deptNames=Object.keys(byDept).sort(function(a,b){return byDept[b]-byDept[a]});
+  active.forEach(function(r){var d=r[2]||'(未分配)';if(!byDept[d])byDept[d]=[];byDept[d].push(r)});
+  var deptNames=Object.keys(byDept).sort(function(a,b){return byDept[b].length-byDept[a].length});
   destroy('c1dept');
-  charts.c1dept=new Chart(document.getElementById('c1dept'),{type:'bar',data:{labels:deptNames,datasets:[{label:'人数',data:deptNames.map(function(d){return byDept[d]}),backgroundColor:'#3949ab',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  charts.c1dept=new Chart(document.getElementById('c1dept'),{
+    type:'bar',
+    data:{labels:deptNames,datasets:[{label:'人数',data:deptNames.map(function(d){return byDept[d].length}),backgroundColor:'#3949ab',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},
+      onClick:function(evt,elements){
+        if(elements.length>0){
+          var idx=elements[0].index;
+          var dept=deptNames[idx];
+          showDrill(dept, byDept[dept]);
+        }
+      }
+    }
+  });
 
-  destroy('c1status');
-  charts.c1status=new Chart(document.getElementById('c1status'),{type:'doughnut',data:{labels:['正式','试用'],datasets:[{data:[formal,trial],backgroundColor:['#3949ab','#ff9800'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
-
-  var hireMonths={};
-  active.forEach(function(r){if(r[4])hireMonths[r[4]]=(hireMonths[r[4]]||0)+1});
-  var hireLabels=Object.keys(hireMonths).sort();
-  if(hireLabels.length>24)hireLabels=hireLabels.slice(-24);
-  var hireData=hireLabels.map(function(m){return hireMonths[m]});
-  var hireDisplay=hireLabels.map(function(m){var p=m.split('-');return p[0].slice(2)+'/'+p[1]});
-  destroy('c1hire');
-  charts.c1hire=new Chart(document.getElementById('c1hire'),{type:'bar',data:{labels:hireDisplay,datasets:[{label:'入职人数',data:hireData,backgroundColor:'#42a5f5',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
-
-  var tenureBuckets={'<1年':0,'1-2年':0,'2-3年':0,'3-5年':0,'5年以上':0};
-  active.forEach(function(r){var t=r[8];if(t<1)tenureBuckets['<1年']++;else if(t<2)tenureBuckets['1-2年']++;else if(t<3)tenureBuckets['2-3年']++;else if(t<5)tenureBuckets['3-5年']++;else tenureBuckets['5年以上']++});
+  // Chart: 司龄分布
+  var tenureBuckets={'<1年':[],'1-2年':[],'2-3年':[],'3-5年':[],'5年以上':[]};
+  active.forEach(function(r){
+    var t=r[8];
+    if(t<1)tenureBuckets['<1年'].push(r);
+    else if(t<2)tenureBuckets['1-2年'].push(r);
+    else if(t<3)tenureBuckets['2-3年'].push(r);
+    else if(t<5)tenureBuckets['3-5年'].push(r);
+    else tenureBuckets['5年以上'].push(r);
+  });
   destroy('c1tenure');
-  charts.c1tenure=new Chart(document.getElementById('c1tenure'),{type:'bar',data:{labels:Object.keys(tenureBuckets),datasets:[{label:'人数',data:Object.values(tenureBuckets),backgroundColor:['#ef5350','#ff9800','#ffca28','#66bb6a','#42a5f5'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  charts.c1tenure=new Chart(document.getElementById('c1tenure'),{
+    type:'bar',
+    data:{labels:Object.keys(tenureBuckets),datasets:[{label:'人数',data:Object.keys(tenureBuckets).map(function(k){return tenureBuckets[k].length}),backgroundColor:['#ef5350','#ff9800','#ffca28','#66bb6a','#42a5f5'],borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},
+      onClick:function(evt,elements){
+        if(elements.length>0){
+          var idx=elements[0].index;
+          var label=Object.keys(tenureBuckets)[idx];
+          showDrill('司龄 '+label, tenureBuckets[label]);
+        }
+      }
+    }
+  });
 
-  var ageBuckets={'<25':0,'25-30':0,'30-35':0,'35-40':0,'40+':0};
-  active.forEach(function(r){var a=r[7];if(!a)return;if(a<25)ageBuckets['<25']++;else if(a<30)ageBuckets['25-30']++;else if(a<35)ageBuckets['30-35']++;else if(a<40)ageBuckets['35-40']++;else ageBuckets['40+']++});
+  // Chart: 年龄分布
+  var ageBuckets={'<25':[],'25-30':[],'30-35':[],'35-40':[],'40+':[]};
+  active.forEach(function(r){
+    var a=r[7];if(!a)return;
+    if(a<25)ageBuckets['<25'].push(r);
+    else if(a<30)ageBuckets['25-30'].push(r);
+    else if(a<35)ageBuckets['30-35'].push(r);
+    else if(a<40)ageBuckets['35-40'].push(r);
+    else ageBuckets['40+'].push(r);
+  });
   destroy('c1age');
-  charts.c1age=new Chart(document.getElementById('c1age'),{type:'bar',data:{labels:Object.keys(ageBuckets),datasets:[{label:'人数',data:Object.values(ageBuckets),backgroundColor:['#ce93d8','#7986cb','#4db6ac','#ffb74d','#e57373'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  charts.c1age=new Chart(document.getElementById('c1age'),{
+    type:'bar',
+    data:{labels:Object.keys(ageBuckets),datasets:[{label:'人数',data:Object.keys(ageBuckets).map(function(k){return ageBuckets[k].length}),backgroundColor:['#ce93d8','#7986cb','#4db6ac','#ffb74d','#e57373'],borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},
+      onClick:function(evt,elements){
+        if(elements.length>0){
+          var idx=elements[0].index;
+          var label=Object.keys(ageBuckets)[idx];
+          showDrill('年龄 '+label+'岁', ageBuckets[label]);
+        }
+      }
+    }
+  });
+
+  // Chart: 人数占比 pie
+  var pieColors=['#3949ab','#42a5f5','#66bb6a','#ff9800','#ef5350','#ab47bc','#26a69a','#ffa726','#78909c','#8d6e63'];
+  destroy('c1pie');
+  charts.c1pie=new Chart(document.getElementById('c1pie'),{
+    type:'doughnut',
+    data:{labels:deptNames,datasets:[{data:deptNames.map(function(d){return byDept[d].length}),backgroundColor:pieColors.slice(0,deptNames.length),borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:11},padding:8}}}
+    }
+  });
 }
 
+// === Tab2: Attendance ===
 function updateTab2(month,d4){
   var data=getMonthlyFiltered(month,d4);
   var n=data.length;
@@ -240,36 +391,79 @@ function updateTab2(month,d4){
   var byD4={};
   data.forEach(function(r){
     var d=r[2]||'(未分配)';
-    if(!byD4[d])byD4[d]={n:0,target:0,actual:0,late:0,ot:0,otWd:0,otWe:0,otHol:0};
-    var g=byD4[d];g.n++;g.target+=r[3];g.actual+=r[4];g.late+=r[5];g.ot+=r[6];g.otWd+=r[7];g.otWe+=r[8];g.otHol+=r[9];
+    if(!byD4[d])byD4[d]={n:0,target:0,actual:0,late:0,ot:0,otWd:0,otWe:0,otHol:0,records:[]};
+    var g=byD4[d];g.n++;g.target+=r[3];g.actual+=r[4];g.late+=r[5];g.ot+=r[6];g.otWd+=r[7];g.otWe+=r[8];g.otHol+=r[9];g.records.push(r);
   });
   var deptNames=Object.keys(byD4).sort(function(a,b){return byD4[b].n-byD4[a].n});
 
+  // 出勤率
   destroy('c2attend');
-  charts.c2attend=new Chart(document.getElementById('c2attend'),{type:'bar',data:{labels:deptNames,datasets:[{label:'出勤率(%)',data:deptNames.map(function(d){var g=byD4[d];return g.target>0?+(g.actual/g.target*100).toFixed(1):0}),backgroundColor:'#42a5f5',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:80,max:100,ticks:{callback:function(v){return v+'%'}}}}}});
+  charts.c2attend=new Chart(document.getElementById('c2attend'),{
+    type:'bar',
+    data:{labels:deptNames,datasets:[{label:'出勤率(%)',data:deptNames.map(function(d){var g=byD4[d];return g.target>0?+(g.actual/g.target*100).toFixed(1):0}),backgroundColor:'#42a5f5',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{min:80,max:100,ticks:{callback:function(v){return v+'%'}}}},
+      onClick:function(evt,elements){
+        if(elements.length>0){showDrillMonthly(deptNames[elements[0].index]+' 考勤明细',byD4[deptNames[elements[0].index]].records)}
+      }
+    }
+  });
 
+  // 加班工时
   destroy('c2ot');
-  charts.c2ot=new Chart(document.getElementById('c2ot'),{type:'bar',data:{labels:deptNames,datasets:[{label:'加班时长(h)',data:deptNames.map(function(d){return +byD4[d].ot.toFixed(1)}),backgroundColor:'#ef5350',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+  charts.c2ot=new Chart(document.getElementById('c2ot'),{
+    type:'bar',
+    data:{labels:deptNames,datasets:[{label:'加班时长(h)',data:deptNames.map(function(d){return +byD4[d].ot.toFixed(1)}),backgroundColor:'#ef5350',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true}},
+      onClick:function(evt,elements){
+        if(elements.length>0){showDrillMonthly(deptNames[elements[0].index]+' 加班明细',byD4[deptNames[elements[0].index]].records)}
+      }
+    }
+  });
 
+  // 加班类型
   var otWd=0,otWe=0,otHol=0;
   data.forEach(function(r){otWd+=r[7];otWe+=r[8];otHol+=r[9]});
   destroy('c2ottype');
-  charts.c2ottype=new Chart(document.getElementById('c2ottype'),{type:'doughnut',data:{labels:['工作日加班','公休日加班','节假日加班'],datasets:[{data:[+otWd.toFixed(1),+otWe.toFixed(1),+otHol.toFixed(1)],backgroundColor:['#42a5f5','#ff9800','#ef5350'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+  charts.c2ottype=new Chart(document.getElementById('c2ottype'),{
+    type:'doughnut',
+    data:{labels:['工作日加班','公休日加班','节假日加班'],datasets:[{data:[+otWd.toFixed(1),+otWe.toFixed(1),+otHol.toFixed(1)],backgroundColor:['#42a5f5','#ff9800','#ef5350'],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+  });
 
+  // 请假类型
   var lvAnnual=0,lvCasual=0,lvSick=0,lvAdjust=0;
   data.forEach(function(r){lvAnnual+=r[11];lvCasual+=r[12];lvSick+=r[13];lvAdjust+=r[14]});
   destroy('c2leave');
-  charts.c2leave=new Chart(document.getElementById('c2leave'),{type:'doughnut',data:{labels:['年假','事假','病假','调休假'],datasets:[{data:[+lvAnnual.toFixed(1),+lvCasual.toFixed(1),+lvSick.toFixed(1),+lvAdjust.toFixed(1)],backgroundColor:['#66bb6a','#ffa726','#ef5350','#ab47bc'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+  charts.c2leave=new Chart(document.getElementById('c2leave'),{
+    type:'doughnut',
+    data:{labels:['年假','事假','病假','调休假'],datasets:[{data:[+lvAnnual.toFixed(1),+lvCasual.toFixed(1),+lvSick.toFixed(1),+lvAdjust.toFixed(1)],backgroundColor:['#66bb6a','#ffa726','#ef5350','#ab47bc'],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+  });
 
+  // 迟到
   destroy('c2late');
-  charts.c2late=new Chart(document.getElementById('c2late'),{type:'bar',data:{labels:deptNames,datasets:[{label:'迟到次数',data:deptNames.map(function(d){return byD4[d].late}),backgroundColor:'#ff9800',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  charts.c2late=new Chart(document.getElementById('c2late'),{
+    type:'bar',
+    data:{labels:deptNames,datasets:[{label:'迟到次数',data:deptNames.map(function(d){return byD4[d].late}),backgroundColor:'#ff9800',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},
+      onClick:function(evt,elements){
+        if(elements.length>0){showDrillMonthly(deptNames[elements[0].index]+' 迟到明细',byD4[deptNames[elements[0].index]].records)}
+      }
+    }
+  });
 }
 
+// === Tab3: Performance ===
 function updateTab3(month,d4){
-  var data=getPerfFiltered(month,d4);
-  var seen={};var unique=[];
-  data.forEach(function(r){if(!seen[r[0]]){seen[r[0]]=true;unique.push(r)}});
-  data=unique;
+  var raw=getPerfFiltered(month,d4);
+  var seen={};var data=[];
+  raw.forEach(function(r){if(!seen[r[0]]){seen[r[0]]=true;data.push(r)}});
   var n=data.length;
   var scores=data.filter(function(r){return r[4]!==null}).map(function(r){return r[4]});
   var avgScore=scores.length>0?scores.reduce(function(a,b){return a+b},0)/scores.length:0;
@@ -284,35 +478,102 @@ function updateTab3(month,d4){
     '<div class="kpi"><div class="kpi-label">超出预期</div><div class="kpi-value green">'+exceed+'</div><div class="kpi-sub">占比 '+fmtPct(n>0?exceed/n*100:0)+'</div></div>'+
     '<div class="kpi"><div class="kpi-label">符合预期-</div><div class="kpi-value orange">'+meetMinus+'</div><div class="kpi-sub">占比 '+fmtPct(n>0?meetMinus/n*100:0)+'</div></div>';
 
+  // 绩效等级分布
   var gradeLabels=['超出预期','符合预期+','符合预期','符合预期-'];
   var gradeColors=['#2e7d32','#66bb6a','#42a5f5','#ff9800'];
   destroy('c3grade');
-  charts.c3grade=new Chart(document.getElementById('c3grade'),{type:'doughnut',data:{labels:gradeLabels,datasets:[{data:gradeLabels.map(function(g){return grades[g]||0}),backgroundColor:gradeColors,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+  charts.c3grade=new Chart(document.getElementById('c3grade'),{
+    type:'doughnut',
+    data:{labels:gradeLabels,datasets:[{data:gradeLabels.map(function(g){return grades[g]||0}),backgroundColor:gradeColors,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'}},
+      onClick:function(evt,elements){
+        if(elements.length>0){
+          var g=gradeLabels[elements[0].index];
+          var list=data.filter(function(r){return r[5]===g});
+          showDrillPerf(g,list);
+        }
+      }
+    }
+  });
 
-  var bins={'2.0-2.5':0,'2.5-3.0':0,'3.0-3.5':0,'3.5-4.0':0};
-  scores.forEach(function(s){if(s<2.5)bins['2.0-2.5']++;else if(s<3.0)bins['2.5-3.0']++;else if(s<3.5)bins['3.0-3.5']++;else bins['3.5-4.0']++});
+  // 绩效分数分布
+  var bins={'2.0-2.5':[],'2.5-3.0':[],'3.0-3.5':[],'3.5-4.0':[]};
+  data.forEach(function(r){
+    if(r[4]===null)return;
+    var s=r[4];
+    if(s<2.5)bins['2.0-2.5'].push(r);
+    else if(s<3.0)bins['2.5-3.0'].push(r);
+    else if(s<3.5)bins['3.0-3.5'].push(r);
+    else bins['3.5-4.0'].push(r);
+  });
   destroy('c3score');
-  charts.c3score=new Chart(document.getElementById('c3score'),{type:'bar',data:{labels:Object.keys(bins),datasets:[{label:'人数',data:Object.values(bins),backgroundColor:['#ef5350','#ff9800','#42a5f5','#66bb6a'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  charts.c3score=new Chart(document.getElementById('c3score'),{
+    type:'bar',
+    data:{labels:Object.keys(bins),datasets:[{label:'人数',data:Object.keys(bins).map(function(k){return bins[k].length}),backgroundColor:['#ef5350','#ff9800','#42a5f5','#66bb6a'],borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{stepSize:1}}},
+      onClick:function(evt,elements){
+        if(elements.length>0){
+          var k=Object.keys(bins)[elements[0].index];
+          showDrillPerf('绩效分 '+k,bins[k]);
+        }
+      }
+    }
+  });
 
+  // 各部门绩效等级 (stacked bar with drill)
   var byD4={};
   data.forEach(function(r){
     var d=r[3]||'(未分配)';
-    if(!byD4[d])byD4[d]={exceed:0,meetP:0,meet:0,meetM:0,n:0,totalScore:0};
-    var g=byD4[d];g.n++;
+    if(!byD4[d])byD4[d]={exceed:0,meetP:0,meet:0,meetM:0,n:0,totalScore:0,records:[]};
+    var g=byD4[d];g.n++;g.records.push(r);
     if(r[4]!==null)g.totalScore+=r[4];
-    var gr=r[5];
-    if(gr==='超出预期')g.exceed++;
-    else if(gr==='符合预期+')g.meetP++;
-    else if(gr==='符合预期')g.meet++;
-    else if(gr==='符合预期-')g.meetM++;
+    if(r[5]==='超出预期')g.exceed++;
+    else if(r[5]==='符合预期+')g.meetP++;
+    else if(r[5]==='符合预期')g.meet++;
+    else if(r[5]==='符合预期-')g.meetM++;
   });
   var deptNames=Object.keys(byD4).sort(function(a,b){return byD4[b].n-byD4[a].n});
 
   destroy('c3deptGrade');
-  charts.c3deptGrade=new Chart(document.getElementById('c3deptGrade'),{type:'bar',data:{labels:deptNames,datasets:[{label:'超出预期',data:deptNames.map(function(d){return byD4[d].exceed}),backgroundColor:'#2e7d32'},{label:'符合预期+',data:deptNames.map(function(d){return byD4[d].meetP}),backgroundColor:'#66bb6a'},{label:'符合预期',data:deptNames.map(function(d){return byD4[d].meet}),backgroundColor:'#42a5f5'},{label:'符合预期-',data:deptNames.map(function(d){return byD4[d].meetM}),backgroundColor:'#ff9800'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11}}}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{stepSize:1}}}}});
+  charts.c3deptGrade=new Chart(document.getElementById('c3deptGrade'),{
+    type:'bar',
+    data:{labels:deptNames,datasets:[
+      {label:'超出预期',data:deptNames.map(function(d){return byD4[d].exceed}),backgroundColor:'#2e7d32'},
+      {label:'符合预期+',data:deptNames.map(function(d){return byD4[d].meetP}),backgroundColor:'#66bb6a'},
+      {label:'符合预期',data:deptNames.map(function(d){return byD4[d].meet}),backgroundColor:'#42a5f5'},
+      {label:'符合预期-',data:deptNames.map(function(d){return byD4[d].meetM}),backgroundColor:'#ff9800'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11}}}},
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{stepSize:1}}},
+      onClick:function(evt,elements){
+        if(elements.length>0){
+          var dept=deptNames[elements[0].index];
+          showDrillPerf(dept+' 绩效明细',byD4[dept].records);
+        }
+      }
+    }
+  });
 
+  // 各部门平均分
   destroy('c3deptAvg');
-  charts.c3deptAvg=new Chart(document.getElementById('c3deptAvg'),{type:'bar',data:{labels:deptNames,datasets:[{label:'平均分',data:deptNames.map(function(d){var g=byD4[d];return g.n>0?+(g.totalScore/g.n).toFixed(2):0}),backgroundColor:'#3949ab',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:2.5,max:4.0,ticks:{stepSize:0.25}}}}});
+  charts.c3deptAvg=new Chart(document.getElementById('c3deptAvg'),{
+    type:'bar',
+    data:{labels:deptNames,datasets:[{label:'平均分',data:deptNames.map(function(d){var g=byD4[d];return g.n>0?+(g.totalScore/g.n).toFixed(2):0}),backgroundColor:'#3949ab',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{min:2.5,max:4.0,ticks:{stepSize:0.25}}},
+      onClick:function(evt,elements){
+        if(elements.length>0){
+          var dept=deptNames[elements[0].index];
+          showDrillPerf(dept+' 绩效明细',byD4[dept].records);
+        }
+      }
+    }
+  });
 }
 
 document.getElementById('selMonth').addEventListener('change',update);
