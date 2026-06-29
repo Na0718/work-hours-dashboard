@@ -7,55 +7,65 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:#eef1f5;color:#333;min-height:100vh}
-.header{background:linear-gradient(135deg,#1a237e 0%,#283593 50%,#3949ab 100%);color:#fff;padding:18px 30px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.header h1{font-size:22px;font-weight:700;letter-spacing:1px}
-.filters{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.filters label{font-size:13px;opacity:.85}
-.filters select{padding:6px 14px;border:none;border-radius:6px;font-size:13px;background:rgba(255,255,255,.18);color:#fff;outline:none;cursor:pointer;min-width:130px}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:#f5f6fa;color:#2d3436;min-height:100vh}
+.header{background:linear-gradient(135deg,#2c3e50 0%,#34495e 50%,#4a6fa5 100%);color:#fff;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.header h1{font-size:20px;font-weight:600;letter-spacing:.5px}
+.filters{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.filters label{font-size:12px;opacity:.8}
+.filters select{padding:5px 12px;border:none;border-radius:6px;font-size:12px;background:rgba(255,255,255,.15);color:#fff;outline:none;cursor:pointer;min-width:120px;backdrop-filter:blur(4px)}
 .filters select option{color:#333;background:#fff}
-.tab-bar{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;padding:0 20px}
-.tab-btn{padding:14px 28px;font-size:15px;font-weight:600;cursor:pointer;border:none;background:none;color:#666;position:relative;transition:color .2s}
-.tab-btn.active{color:#1a237e}
-.tab-btn.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:3px;background:#1a237e;border-radius:2px 2px 0 0}
-.tab-btn:hover{color:#1a237e}
-.tab-panel{display:none;padding:20px 24px;max-width:1440px;margin:0 auto}
+.tab-bar{display:flex;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.tab-btn{padding:12px 24px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;color:#94a3b8;position:relative;transition:all .2s}
+.tab-btn.active{color:#2c3e50;font-weight:600}
+.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:8px;right:8px;height:2.5px;background:linear-gradient(90deg,#4a6fa5,#6c8ebf);border-radius:2px 2px 0 0}
+.tab-btn:hover{color:#2c3e50}
+.tab-panel{display:none;padding:16px 24px;max-width:1280px;margin:0 auto}
 .tab-panel.active{display:block}
-.summary-box{background:#f0f4ff;border-left:4px solid #1a237e;padding:16px 20px;font-size:14px;line-height:1.8;margin-bottom:20px;border-radius:0 8px 8px 0;color:#333}
-.summary-box b{font-weight:700}
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px}
-.kpi-card{background:#fff;border-radius:10px;padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.07);text-align:center}
-.kpi-card .label{font-size:13px;color:#888;margin-bottom:6px}
-.kpi-card .value{font-size:28px;font-weight:700;color:#1a237e}
-.kpi-card .sub{font-size:12px;color:#999;margin-top:4px}
-.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
-.chart-card{background:#fff;border-radius:10px;padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.summary-box{background:linear-gradient(135deg,#f8fafc,#eef2ff);border-left:3px solid #4a6fa5;padding:14px 18px;font-size:13px;line-height:1.9;margin-bottom:14px;border-radius:0 8px 8px 0;color:#475569;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.summary-box b{font-weight:700;color:#1e293b}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.kpi-card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);text-align:center;border:1px solid #f1f5f9;transition:box-shadow .2s}
+.kpi-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.kpi-card .label{font-size:12px;color:#94a3b8;margin-bottom:4px;font-weight:500}
+.kpi-card .value{font-size:24px;font-weight:700;color:#2c3e50;line-height:1.2}
+.kpi-card .sub{font-size:11px;color:#94a3b8;margin-top:3px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.chart-card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid #f1f5f9}
 .chart-card.full{grid-column:1/-1}
-.chart-card h3{font-size:15px;font-weight:600;color:#333;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #eee}
+.chart-card h3{font-size:13px;font-weight:600;color:#475569;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:6px}
+.chart-card h3::before{content:'';display:inline-block;width:3px;height:14px;background:linear-gradient(180deg,#4a6fa5,#6c8ebf);border-radius:2px}
 .chart-card canvas{width:100%!important}
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:9999;justify-content:center;align-items:center}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,.5);z-index:9999;justify-content:center;align-items:center;backdrop-filter:blur(2px)}
 .modal-overlay.show{display:flex}
-.modal-box{background:#fff;border-radius:12px;padding:28px;max-width:800px;width:90%;max-height:80vh;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,.25);position:relative}
-.modal-box .close-btn{position:absolute;top:12px;right:16px;font-size:22px;cursor:pointer;color:#999;background:none;border:none;line-height:1}
-.modal-box .close-btn:hover{color:#333}
-.modal-box h3{font-size:17px;font-weight:700;margin-bottom:16px;color:#1a237e}
-.modal-table{width:100%;border-collapse:collapse;font-size:13px}
-.modal-table th{background:#f5f5f5;padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid #ddd}
-.modal-table td{padding:7px 10px;border-bottom:1px solid #eee}
-.modal-table tr:hover td{background:#f9f9ff}
-.health-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
-.health-table th{background:#f5f7fa;padding:10px 12px;text-align:left;font-weight:600;border-bottom:2px solid #ddd}
-.health-table td{padding:9px 12px;border-bottom:1px solid #eee}
-.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:middle}
-.dot-green{background:#4caf50}
-.dot-yellow{background:#ff9800}
-.dot-red{background:#f44336}
-.dot-gray{background:#bdbdbd}
-.new-hire-section{margin-top:16px}
-.new-hire-section h4{font-size:14px;font-weight:600;margin-bottom:10px;color:#555}
-.nh-table{width:100%;border-collapse:collapse;font-size:12px}
-.nh-table th{background:#f0f4ff;padding:7px 10px;text-align:left;font-weight:600;border-bottom:2px solid #c5cae9}
-.nh-table td{padding:6px 10px;border-bottom:1px solid #eee}
+.modal-box{background:#fff;border-radius:14px;padding:24px;max-width:780px;width:92%;max-height:78vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative}
+.modal-box .close-btn{position:absolute;top:10px;right:14px;font-size:20px;cursor:pointer;color:#94a3b8;background:none;border:none;line-height:1;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-box .close-btn:hover{color:#334155;background:#f1f5f9}
+.modal-box h3{font-size:15px;font-weight:700;margin-bottom:14px;color:#2c3e50}
+.modal-table{width:100%;border-collapse:collapse;font-size:12px}
+.modal-table th{background:#f8fafc;padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid #e2e8f0;color:#475569}
+.modal-table td{padding:6px 10px;border-bottom:1px solid #f1f5f9}
+.modal-table tr:hover td{background:#f8fafc}
+.health-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+.health-table th{background:#f8fafc;padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid #e2e8f0;color:#475569;white-space:nowrap}
+.health-table td{padding:7px 10px;border-bottom:1px solid #f1f5f9}
+.health-table tr:hover td{background:#f8fafc}
+.health-note{font-size:11px;color:#64748b;line-height:1.6;padding:10px 14px;margin-top:8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0}
+.health-note b{color:#334155}
+.health-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-green{background:#dcfce7;color:#166534}
+.badge-yellow{background:#fef3c7;color:#92400e}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-gray{background:#f1f5f9;color:#64748b}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.dot-green{background:#22c55e}
+.dot-yellow{background:#f59e0b}
+.dot-red{background:#ef4444}
+.dot-gray{background:#cbd5e1}
+.new-hire-section{margin-top:12px}
+.new-hire-section h4{font-size:13px;font-weight:600;margin-bottom:8px;color:#475569}
+.nh-table{width:100%;border-collapse:collapse;font-size:11px}
+.nh-table th{background:#f0f4ff;padding:6px 8px;text-align:left;font-weight:600;border-bottom:2px solid #dbe6f0;color:#475569}
+.nh-table td{padding:5px 8px;border-bottom:1px solid #f1f5f9}
 @media(max-width:900px){.chart-grid{grid-template-columns:1fr}.kpi-row{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -80,9 +90,9 @@ body{font-family:-apple-system,"PingFang SC","Microsoft YaHei","Helvetica Neue",
   <div class="summary-box" id="sum1"></div>
   <div class="kpi-row" id="kpi1"></div>
   <div class="chart-grid">
-    <div class="chart-card full"><h3>入职/离职/净增减趋势（1月-6月）</h3><canvas id="c1_trend" height="90"></canvas></div>
-    <div class="chart-card"><h3>司龄分布</h3><canvas id="c1_tenure" height="160"></canvas></div>
-    <div class="chart-card"><h3>离职原因分析</h3><canvas id="c1_reason" height="160"></canvas></div>
+    <div class="chart-card full"><h3>入职/离职/净增减趋势（1月-6月）</h3><canvas id="c1_trend" height="65"></canvas></div>
+    <div class="chart-card"><h3>司龄分布</h3><canvas id="c1_tenure" height="120"></canvas></div>
+    <div class="chart-card"><h3>离职原因分析</h3><canvas id="c1_reason" height="120"></canvas></div>
   </div>
 </div>
 
@@ -90,9 +100,9 @@ body{font-family:-apple-system,"PingFang SC","Microsoft YaHei","Helvetica Neue",
   <div class="summary-box" id="sum2"></div>
   <div class="kpi-row" id="kpi2"></div>
   <div class="chart-grid">
-    <div class="chart-card"><h3>各四级部门加班工时</h3><canvas id="c2_ot" height="160"></canvas></div>
-    <div class="chart-card full"><h3>加班集中度分析（各部门Top5）</h3><canvas id="c2_otfocus" height="100"></canvas></div>
-    <div class="chart-card"><h3>各四级部门迟到次数</h3><canvas id="c2_late" height="160"></canvas></div>
+    <div class="chart-card"><h3>各四级部门加班工时</h3><canvas id="c2_ot" height="120"></canvas></div>
+    <div class="chart-card full"><h3>加班集中度分析（各部门Top5）</h3><canvas id="c2_otfocus" height="75"></canvas></div>
+    <div class="chart-card"><h3>各四级部门迟到次数</h3><canvas id="c2_late" height="120"></canvas></div>
   </div>
 </div>
 
@@ -100,10 +110,10 @@ body{font-family:-apple-system,"PingFang SC","Microsoft YaHei","Helvetica Neue",
   <div class="summary-box" id="sum3"></div>
   <div class="kpi-row" id="kpi3"></div>
   <div class="chart-grid">
-    <div class="chart-card"><h3>绩效等级分布</h3><canvas id="c3_grade" height="160"></canvas></div>
-    <div class="chart-card full"><h3>各四级部门绩效等级分布</h3><canvas id="c3_deptgrade" height="100"></canvas></div>
+    <div class="chart-card"><h3>绩效等级分布</h3><canvas id="c3_grade" height="120"></canvas></div>
+    <div class="chart-card full"><h3>各四级部门绩效等级分布</h3><canvas id="c3_deptgrade" height="80"></canvas></div>
     <div class="chart-card full"><h3>绩效分布健康度</h3><div id="healthTbl"></div></div>
-    <div class="chart-card full"><h3>新入职人员绩效</h3><canvas id="c3_newhire" height="90"></canvas><div id="newhireTbl" class="new-hire-section"></div></div>
+    <div class="chart-card full"><h3>新入职人员绩效</h3><canvas id="c3_newhire" height="70"></canvas><div id="newhireTbl" class="new-hire-section"></div></div>
   </div>
 </div>
 
@@ -111,10 +121,10 @@ body{font-family:-apple-system,"PingFang SC","Microsoft YaHei","Helvetica Neue",
   <div class="summary-box" id="sum4"></div>
   <div class="kpi-row" id="kpi4"></div>
   <div class="chart-grid">
-    <div class="chart-card"><h3>离职原因分布</h3><canvas id="c4_reason" height="160"></canvas></div>
-    <div class="chart-card"><h3>离职类型分布</h3><canvas id="c4_type" height="160"></canvas></div>
-    <div class="chart-card"><h3>各月离职趋势</h3><canvas id="c4_trend" height="160"></canvas></div>
-    <div class="chart-card"><h3>各四级部门离职人数</h3><canvas id="c4_dept" height="160"></canvas></div>
+    <div class="chart-card"><h3>离职原因分布</h3><canvas id="c4_reason" height="120"></canvas></div>
+    <div class="chart-card"><h3>离职类型分布</h3><canvas id="c4_type" height="120"></canvas></div>
+    <div class="chart-card"><h3>各月离职趋势</h3><canvas id="c4_trend" height="120"></canvas></div>
+    <div class="chart-card"><h3>各四级部门离职人数</h3><canvas id="c4_dept" height="120"></canvas></div>
     <div class="chart-card full"><h3>离职人员明细表</h3><div id="leaveTbl"></div></div>
   </div>
 </div>
@@ -133,7 +143,7 @@ var DATA={"R":[["GL001839","正式","交付组","前端研发组","2026-06","","
 /* ===== Utility ===== */
 var charts={};
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
-var COLORS=['#1a237e','#3949ab','#5c6bc0','#7986cb','#9fa8da','#c5cae9','#e8eaf6','#303f9f','#1565c0','#42a5f5','#ef6c00','#e53935','#43a047','#8e24aa','#00897b','#6d4c41'];
+var COLORS=['#4a6fa5','#6c8ebf','#8fabc7','#a7c4db','#3b82f6','#60a5fa','#93c5fd','#1e40af','#2563eb','#f59e0b','#ef4444','#22c55e','#8b5cf6','#14b8a6','#a16207'];
 var COLORS_A=COLORS.map(c=>c+'cc');
 
 function monthToPeriod(m){var map={'2026-01':'一月','2026-02':'二月','2026-03':'三月','2026-04':'四月','2026-05':'五月','2026-06':'六月'};return map[m]||m}
@@ -214,12 +224,12 @@ function renderTab1(){
   if(sortedDepts.length>0){
     leaveDeptText='离职主要集中在';
     sortedDepts.slice(0,2).forEach(function(dep,i){
-      var color=dep==='交付组'?'#e53935':dep==='美国技术支持组'?'#ef6c00':'#1a237e';
+      var color=dep==='交付组'?'#ef4444':dep==='美国技术支持组'?'#f59e0b':'#4a6fa5';
       leaveDeptText+=(i>0?'和':'')+'<b style="color:'+color+'">'+dep+'('+leaveByDept[dep]+'人)</b>';
     });
     leaveDeptText+='。';
   }
-  document.getElementById('sum1').innerHTML='本月入职<b>'+hires.length+'人</b>，离职<b>'+leaves.length+'人</b>，净增<b style="color:'+(net>=0?'#43a047':'#e53935')+'">'+(net>=0?'+':'')+net+'人</b>。上半年累计入职<b>'+totalHires+'人</b>，离职<b>'+totalLeaves+'人</b>。'+leaveDeptText;
+  document.getElementById('sum1').innerHTML='本月入职<b>'+hires.length+'人</b>，离职<b>'+leaves.length+'人</b>，净增<b style="color:'+(net>=0?'#22c55e':'#ef4444')+'">'+(net>=0?'+':'')+net+'人</b>。上半年累计入职<b>'+totalHires+'人</b>，离职<b>'+totalLeaves+'人</b>。'+leaveDeptText;
 
   // KPIs
   document.getElementById('kpi1').innerHTML=
@@ -239,9 +249,9 @@ function renderTab1(){
   charts['c1_trend']=new Chart(document.getElementById('c1_trend'),{
     type:'bar',
     data:{labels:trendLabels,datasets:[
-      {label:'入职',data:hireData,backgroundColor:'#43a047',order:2},
-      {label:'离职',data:leaveData,backgroundColor:'#e53935',order:2},
-      {label:'净增减',data:netData,type:'line',borderColor:'#1a237e',backgroundColor:'rgba(26,35,126,.1)',fill:true,tension:.3,order:1}
+      {label:'入职',data:hireData,backgroundColor:'#22c55e',order:2},
+      {label:'离职',data:leaveData,backgroundColor:'#ef4444',order:2},
+      {label:'净增减',data:netData,type:'line',borderColor:'#4a6fa5',backgroundColor:'rgba(26,35,126,.1)',fill:true,tension:.3,order:1}
     ]},
     options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}},
       onClick:function(evt,els){
@@ -304,7 +314,7 @@ function renderTab1(){
   if(rsLabels.length===0){rsLabels=['暂无'];rsData=[0]}
   charts['c1_reason']=new Chart(document.getElementById('c1_reason'),{
     type:'bar',
-    data:{labels:rsLabels,datasets:[{label:'人数',data:rsData,backgroundColor:'#e53935cc'}]},
+    data:{labels:rsLabels,datasets:[{label:'人数',data:rsData,backgroundColor:'#ef4444cc'}]},
     options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}},
       onClick:function(evt,els){
         if(!els.length)return;
@@ -367,10 +377,10 @@ function renderTab2(){
   var highConcDept=otFocusData.filter(function(x){return parseFloat(x.pct)>70&&x.total>0});
   var concText='';
   if(highConcDept.length>0){
-    concText='加班集中度较高的部门：<b style="color:#e53935">'+highConcDept.map(function(x){return x.dep+'(Top5占比'+x.pct+'%)'}).join('、')+'</b>。';
+    concText='加班集中度较高的部门：<b style="color:#ef4444">'+highConcDept.map(function(x){return x.dep+'(Top5占比'+x.pct+'%)'}).join('、')+'</b>。';
   }
 
-  document.getElementById('sum2').innerHTML='本月考勤<b>'+totalPpl+'人</b>，加班总时长<b style="color:#ef6c00">'+totalOT.toFixed(1)+'小时</b>，迟到总<b>'+totalLate+'次</b>。加班最多部门为<b style="color:#ef6c00">'+topOTDept+'('+topOTHrs.toFixed(1)+'h)</b>，迟到最多部门为<b style="color:#e53935">'+topLateDept+'('+topLateCnt+'次)</b>。'+concText;
+  document.getElementById('sum2').innerHTML='本月考勤<b>'+totalPpl+'人</b>，加班总时长<b style="color:#f59e0b">'+totalOT.toFixed(1)+'小时</b>，迟到总<b>'+totalLate+'次</b>。加班最多部门为<b style="color:#f59e0b">'+topOTDept+'('+topOTHrs.toFixed(1)+'h)</b>，迟到最多部门为<b style="color:#ef4444">'+topLateDept+'('+topLateCnt+'次)</b>。'+concText;
 
   // KPIs
   document.getElementById('kpi2').innerHTML=
@@ -388,7 +398,7 @@ function renderTab2(){
   });
   charts['c2_ot']=new Chart(document.getElementById('c2_ot'),{
     type:'bar',
-    data:{labels:otLabels,datasets:[{label:'加班工时(h)',data:otData,backgroundColor:'#ef6c00'}]},
+    data:{labels:otLabels,datasets:[{label:'加班工时(h)',data:otData,backgroundColor:'#f59e0b'}]},
     options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}},
       onClick:function(evt,els){
         if(!els.length)return;
@@ -407,8 +417,8 @@ function renderTab2(){
   charts['c2_otfocus']=new Chart(document.getElementById('c2_otfocus'),{
     type:'bar',
     data:{labels:otFLabels,datasets:[
-      {label:'部门总加班(h)',data:otFocusData.map(function(x){return x.total}),backgroundColor:'#c5cae9'},
-      {label:'Top5加班(h)',data:otFocusData.map(function(x){return x.top5}),backgroundColor:'#1a237e'}
+      {label:'部门总加班(h)',data:otFocusData.map(function(x){return x.total}),backgroundColor:'#dbe6f0'},
+      {label:'Top5加班(h)',data:otFocusData.map(function(x){return x.top5}),backgroundColor:'#4a6fa5'}
     ]},
     options:{responsive:true,plugins:{legend:{position:'top'},tooltip:{callbacks:{afterBody:function(ctx){var i=ctx[0].dataIndex;return'Top5占比: '+otFocusData[i].pct+'%  ('+otFocusData[i].top5names+')'}}}},scales:{y:{beginAtZero:true}},
       onClick:function(evt,els){
@@ -432,7 +442,7 @@ function renderTab2(){
   });
   charts['c2_late']=new Chart(document.getElementById('c2_late'),{
     type:'bar',
-    data:{labels:lateLabels,datasets:[{label:'迟到次数',data:lateData,backgroundColor:'#e53935'}]},
+    data:{labels:lateLabels,datasets:[{label:'迟到次数',data:lateData,backgroundColor:'#ef4444'}]},
     options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}},
       onClick:function(evt,els){
         if(!els.length)return;
@@ -477,9 +487,9 @@ function renderTab3(){
     if(belP>worstBelowPct){worstBelowPct=belP;worstDept=dep}
   });
 
-  var sumText='本月考核<b>'+finished.length+'人</b>（已结束）。超出预期<b style="color:#1a237e">'+exceed+'人('+exceedPct+'%)</b>，符合预期<b>'+meetTotal+'人</b>（其中符合预期+ '+meetPlus+'人，符合预期 '+meet+'人，符合预期- '+meetMinus+'人），低于预期<b style="color:#e53935">'+below+'人('+belowPct+'%)</b>。';
-  if(bestDept)sumText+='超出预期占比最高部门为<b style="color:#43a047">'+bestDept+'('+(bestExceedPct*100).toFixed(1)+'%)</b>';
-  if(worstDept&&worstDept!==bestDept&&worstBelowPct>0)sumText+='，低于预期占比最高部门为<b style="color:#e53935">'+worstDept+'('+(worstBelowPct*100).toFixed(1)+'%)</b>';
+  var sumText='本月考核<b>'+finished.length+'人</b>（已结束）。超出预期<b style="color:#4a6fa5">'+exceed+'人('+exceedPct+'%)</b>，符合预期<b>'+meetTotal+'人</b>（其中符合预期+ '+meetPlus+'人，符合预期 '+meet+'人，符合预期- '+meetMinus+'人），低于预期<b style="color:#ef4444">'+below+'人('+belowPct+'%)</b>。';
+  if(bestDept)sumText+='超出预期占比最高部门为<b style="color:#22c55e">'+bestDept+'('+(bestExceedPct*100).toFixed(1)+'%)</b>';
+  if(worstDept&&worstDept!==bestDept&&worstBelowPct>0)sumText+='，低于预期占比最高部门为<b style="color:#ef4444">'+worstDept+'('+(worstBelowPct*100).toFixed(1)+'%)</b>';
   sumText+='。';
   document.getElementById('sum3').innerHTML=sumText;
 
@@ -499,7 +509,7 @@ function renderTab3(){
   var gData=gLabels.map(function(g){return gradeCounts[g]});
   charts['c3_grade']=new Chart(document.getElementById('c3_grade'),{
     type:'doughnut',
-    data:{labels:gLabels,datasets:[{data:gData,backgroundColor:['#1a237e','#3949ab','#5c6bc0','#9fa8da','#e53935']}]},
+    data:{labels:gLabels,datasets:[{data:gData,backgroundColor:['#4a6fa5','#6c8ebf','#8fabc7','#c8d8e8','#ef4444']}]},
     options:{responsive:true,plugins:{legend:{position:'bottom'}},
       onClick:function(evt,els){
         if(!els.length)return;
@@ -515,7 +525,7 @@ function renderTab3(){
   dc('c3_deptgrade');
   var dgLabels=[],dgDatasets=[];
   deptList.forEach(function(dep){dgLabels.push(dep)});
-  var gradeColors={'超出预期':'#1a237e','符合预期+':'#3949ab','符合预期':'#5c6bc0','符合预期-':'#9fa8da','低于预期':'#e53935'};
+  var gradeColors={'超出预期':'#4a6fa5','符合预期+':'#6c8ebf','符合预期':'#8fabc7','符合预期-':'#c8d8e8','低于预期':'#ef4444'};
   gradeOrder.forEach(function(g){
     var data=[];
     deptList.forEach(function(dep){
@@ -538,8 +548,9 @@ function renderTab3(){
     }
   });
 
-  // Health table - grade based only (no scores)
-  var healthHtml='<table class="health-table"><thead><tr><th>部门</th><th>考核人数</th><th>超出预期</th><th>符合预期+</th><th>符合预期</th><th>符合预期-</th><th>低于预期</th><th>健康度</th></tr></thead><tbody>';
+  // Health table - enhanced grade-based analysis
+  var healthHtml='<table class="health-table"><thead><tr><th>部门</th><th>考核人数</th><th>超出预期</th><th>符合预期+</th><th>符合预期</th><th>符合预期-</th><th>低于预期</th><th>超出占比</th><th>低于占比</th><th>健康度</th><th>关注要点</th></tr></thead><tbody>';
+  var healthNotes=[];
   deptList.forEach(function(dep){
     var recs=finished.filter(function(r){return r[3]===dep});
     var cnt=recs.length;
@@ -548,16 +559,42 @@ function renderTab3(){
     var mt=recs.filter(function(r){return r[5]==='符合预期'}).length;
     var mm=recs.filter(function(r){return r[5]==='符合预期-'}).length;
     var bel=recs.filter(function(r){return r[5]==='低于预期'}).length;
-    var dot='dot-gray';
+    var excPct=cnt>0?((exc/cnt)*100).toFixed(1):'0.0';
+    var belPct=cnt>0?((bel/cnt)*100).toFixed(1):'0.0';
+    var mmPct=cnt>0?((mm/cnt)*100).toFixed(1):'0.0';
+    var dot='dot-gray';var badge='badge-gray';var statusText='-';var note='';
     if(cnt>=3){
-      var excPct=exc/cnt;var belPct=bel/cnt;
-      if(excPct>=0.1&&belPct<0.05)dot='dot-green';
-      else if(belPct<0.15)dot='dot-yellow';
-      else if(cnt>0)dot='dot-red';
-    }else if(cnt>0){dot='dot-yellow'}
-    healthHtml+='<tr><td>'+dep+'</td><td>'+cnt+'</td><td>'+exc+'</td><td>'+mp+'</td><td>'+mt+'</td><td>'+mm+'</td><td>'+bel+'</td><td><span class="dot '+dot+'"></span>'+(dot==='dot-green'?'健康':dot==='dot-yellow'?'关注':dot==='dot-red'?'预警':'-')+'</td></tr>';
+      var excR=exc/cnt;var belR=bel/cnt;var mmR=mm/cnt;
+      if(excR>=0.1&&belR<0.05){dot='dot-green';badge='badge-green';statusText='健康';
+        note='绩效分布良好，高绩效人才占比高';
+      }else if(belR>=0.15){dot='dot-red';badge='badge-red';statusText='预警';
+        note='低于预期占比偏高('+belPct+'%)，需关注绩效改进计划';
+        healthNotes.push('<b style="color:#ef4444">'+dep+'</b>：低于预期占比'+belPct+'%，建议启动绩效辅导或岗位匹配评估');
+      }else if(belR>=0.05||excR<0.05){dot='dot-yellow';badge='badge-yellow';statusText='关注';
+        var reasons=[];
+        if(belR>=0.05)reasons.push('低于预期占比'+belPct+'%');
+        if(excR<0.05)reasons.push('超出预期占比偏低('+excPct+'%)');
+        if(mmR>=0.2)reasons.push('符合预期-占比偏高('+mmPct+'%)');
+        note=reasons.join('，')+'，需关注团队激励与培养';
+        healthNotes.push('<b style="color:#f59e0b">'+dep+'</b>：'+reasons.join('，'));
+      }else{dot='dot-green';badge='badge-green';statusText='健康';
+        note='绩效分布正常';
+      }
+    }else if(cnt>0){dot='dot-yellow';badge='badge-yellow';statusText='样本不足';
+      note='考核人数少于3人，数据参考价值有限';
+    }
+    healthHtml+='<tr><td><b>'+dep+'</b></td><td>'+cnt+'</td><td>'+exc+'</td><td>'+mp+'</td><td>'+mt+'</td><td>'+mm+'</td><td>'+bel+'</td><td>'+excPct+'%</td><td>'+belPct+'%</td><td><span class="health-badge '+badge+'"><span class="dot '+dot+'" style="margin-right:4px"></span>'+statusText+'</span></td><td style="font-size:11px;color:#64748b;max-width:200px">'+note+'</td></tr>';
   });
   healthHtml+='</tbody></table>';
+  // Add analysis notes
+  healthHtml+='<div class="health-note"><b>健康度评估标准：</b>';
+  healthHtml+='绿色(健康) = 超出预期占比≥10% 且 低于预期占比＜5%；';
+  healthHtml+='黄色(关注) = 低于预期占比5%-15% 或 超出预期占比＜5%；';
+  healthHtml+='红色(预警) = 低于预期占比≥15%。';
+  healthHtml+=' 样本量＜3人的部门标记为"样本不足"。</div>';
+  if(healthNotes.length>0){
+    healthHtml+='<div class="health-note" style="margin-top:6px;border-left:3px solid #f59e0b"><b>本期重点关注：</b><br>'+healthNotes.join('；<br>')+'。</div>';
+  }
   document.getElementById('healthTbl').innerHTML=healthHtml;
 
   // New hire performance - grade based
@@ -592,8 +629,8 @@ function renderNewHirePerf(d,m,p,deptList,finished){
   charts['c3_newhire']=new Chart(document.getElementById('c3_newhire'),{
     type:'bar',
     data:{labels:gradeOrder,datasets:[
-      {label:'新入职占比(%)',data:nhPctData,backgroundColor:'#ef6c00'},
-      {label:'全员占比(%)',data:allPctData,backgroundColor:'#3949ab'}
+      {label:'新入职占比(%)',data:nhPctData,backgroundColor:'#f59e0b'},
+      {label:'全员占比(%)',data:allPctData,backgroundColor:'#6c8ebf'}
     ]},
     options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}},
       onClick:function(evt,els){
@@ -651,7 +688,7 @@ function renderTab4(){
   leavers.forEach(function(r){if(r[8])reasonCounts[r[8]]=(reasonCounts[r[8]]||0)+1});
   var topReason=Object.keys(reasonCounts).sort(function(a,b){return reasonCounts[b]-reasonCounts[a]})[0]||'暂无';
 
-  document.getElementById('sum4').innerHTML='累计离职<b>'+totalLeave+'人</b>，月均<b>'+avgPerMonth+'人</b>，离职率<b>'+leaveRate+'%</b>。主动离职（合同期内辞职）占比<b>'+volPct+'%</b>。离职最多部门为<b style="color:#e53935">'+topDept+'('+topDeptCnt+'人)</b>，主要离职原因为<b style="color:#ef6c00">'+topReason+'</b>。';
+  document.getElementById('sum4').innerHTML='累计离职<b>'+totalLeave+'人</b>，月均<b>'+avgPerMonth+'人</b>，离职率<b>'+leaveRate+'%</b>。主动离职（合同期内辞职）占比<b>'+volPct+'%</b>。离职最多部门为<b style="color:#ef4444">'+topDept+'('+topDeptCnt+'人)</b>，主要离职原因为<b style="color:#f59e0b">'+topReason+'</b>。';
 
   // KPIs
   document.getElementById('kpi4').innerHTML=
@@ -686,7 +723,7 @@ function renderTab4(){
   if(tLabels.length===0){tLabels=['暂无'];tData=[0]}
   charts['c4_type']=new Chart(document.getElementById('c4_type'),{
     type:'doughnut',
-    data:{labels:tLabels,datasets:[{data:tData,backgroundColor:['#e53935','#ef6c00','#ff9800','#ffc107']}]},
+    data:{labels:tLabels,datasets:[{data:tData,backgroundColor:['#ef4444','#f59e0b','#ff9800','#ffc107']}]},
     options:{responsive:true,plugins:{legend:{position:'bottom'}},
       onClick:function(evt,els){
         if(!els.length)return;
@@ -708,7 +745,7 @@ function renderTab4(){
   });
   charts['c4_trend']=new Chart(document.getElementById('c4_trend'),{
     type:'line',
-    data:{labels:trendLabels,datasets:[{label:'离职人数',data:trendData,borderColor:'#e53935',backgroundColor:'rgba(229,57,53,.15)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#e53935'}]},
+    data:{labels:trendLabels,datasets:[{label:'离职人数',data:trendData,borderColor:'#ef4444',backgroundColor:'rgba(229,57,53,.15)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#ef4444'}]},
     options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}},
       onClick:function(evt,els){
         if(!els.length)return;
@@ -731,7 +768,7 @@ function renderTab4(){
   });
   charts['c4_dept']=new Chart(document.getElementById('c4_dept'),{
     type:'bar',
-    data:{labels:dLabels,datasets:[{label:'离职人数',data:dData,backgroundColor:'#e53935'}]},
+    data:{labels:dLabels,datasets:[{label:'离职人数',data:dData,backgroundColor:'#ef4444'}]},
     options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}},
       onClick:function(evt,els){
         if(!els.length)return;
